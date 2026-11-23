@@ -405,10 +405,10 @@ function startTracing() {
 // ---- The story
 const KIND = (a) => (/toe/.test(a) ? 'toe' : /cut-up|mouth/.test(a) ? 'cut' : /nick/.test(a) ? 'nick' : /trim|lengthen/.test(a) ? 'length' : 'other');
 const STEP = {
-  toe: 'Set the toe. Level.',
-  cut: 'Raise the mouth. It stops leaping the octave.',
-  nick: 'Nick the languid. A clean start.',
-  length: 'Trim the top. Pitch.',
+  toe: 'Open or close the hole in its foot. This sets how loud it is.',
+  cut: 'Raise the top of the mouth, so it plays its own note and not one far above.',
+  nick: 'Small cuts inside the mouth, so each note starts cleanly.',
+  length: 'Trim the top until it is in tune.',
   other: '',
 };
 const PLAY_SHOT = () => ({ p: [MID[0] - caseDist() * 1.15, 0, Math.max(3, MID[2] - 2.5)], a: [MID[0], 0, MID[2] + 0.5] });
@@ -453,9 +453,9 @@ async function story(heroReady, traced) {
   // I. The pipe. Four shots: the whole pipe; in to the mouth; up to the top
   // for its length; back out to the whole pipe.
   INKED();
-  await card('', 'A pipe organ, rebuilt in software', 'With the physics of the real thing: every pipe made and voiced, then the echo of the building it plays in.', 4200);
-  await card('I', 'The pipe', 'Wind in at the foot. A jet across the mouth. A column of air answers.');
-  await sleep(2500);
+  await card('', 'A pipe organ, rebuilt in software', 'We set out to rebuild one with the physics of the real thing. First we make and tune each pipe. Then we map the echo of the building it plays in.', 4200);
+  await card('I', 'The pipe', 'Air blows in at the bottom and across a slot called the mouth. That sets the air inside the pipe ringing.');
+  await sleep(1600);
   const v = await heroReady;
   await sleep(500);
   await cardOff();
@@ -474,9 +474,9 @@ async function story(heroReady, traced) {
   await cut(leftThird(MOUTH, close()), 2.2);
   steps.classList.remove('gone');
   LIT();
-  await say('As made: too long, the mouth too low, the toe wide open.');
+  await say('Straight from the workshop it sounds wrong. So we adjust it, listening each time.');
   audio.play(show[0].audio, pos);
-  await sleep(2600);
+  await sleep(2000);
   for (const s of show.slice(1, -1)) {
     const k = KIND(s.action);
     if (k === 'length') cut(leftThird(TOP, close()), 1.2); else cut(leftThird(MOUTH, close()), 1.2);
@@ -484,14 +484,14 @@ async function story(heroReady, traced) {
     await say(STEP[k]);
     shape(s);
     audio.play(s.audio, pos);
-    await sleep(1900);
+    await sleep(1400);
   }
   shape(fin);
   mark('');
   cut(leftThird(HC, heroDist() * 1.15), 2.4);
-  await say(`In tune. ${STOPS[hero.stop].name}, ${noteName(hero.key)}.`);
+  await say('Done. It plays its note, in tune, at the right loudness.');
   audio.play(fin.audio, pos);
-  await sleep(2400);
+  await sleep(1900);
   INKED();
   steps.classList.add('gone');
 
@@ -507,7 +507,7 @@ async function story(heroReady, traced) {
     const span = Math.max(3, Math.abs(yb - ya) + 2);
     const d = span / 2 / (halfV() * S.camera.aspect), f = hero.face ?? 0;
     cut({ p: [mid[0] - Math.cos(f) * d, mid[1] - Math.sin(f) * d, mid[2] + 0.4], a: mid }, 3.5);
-    await card('', 'The rank', `One pipe for every key: ${row.length} of them, each voiced the same way.`);
+    await card('', 'A row of pipes', `One pipe for every key on the keyboard: ${row.length} of them, each made the same way.`);
     while (r.pipes.some((p) => !results.has(p.id))) await sleep(200);
     for (const p of row) {
       if (p === hero) { LIT(); setTimeout(INKED, 300); }
@@ -529,48 +529,39 @@ async function story(heroReady, traced) {
   const tick = setInterval(() => { count.textContent = `${done()} / ${total}`; }, 200);
   storyTimers.push(tick);
   lens(20, 3);
-  await card('II', 'The organ', `Seventeen ranks make the organ: ${total} pipes.`);
-  const coreN = CORE.reduce((a, r) => a + rank[r].pipes.length, 0);
-  const coreDone = () => CORE.reduce((a, r) => a + rank[r].done, 0) / coreN;
+  await card('II', 'The organ', `Seventeen rows like that make the organ: ${total} pipes.`);
   const R = () => caseDist() * 1.9;
-  cut((t) => orbit([MID[0] - 3, MID[1], MID[2]], R(), 0.75 - 0.75 * coreDone(), 9 - 9 * coreDone()), 4);
+  // Swing from three-quarter to dead front while the rows go home.
+  { const s0 = now(); cut((t) => { const u = ease((t - s0) / 9); return orbit([MID[0] - 3, MID[1], MID[2]], R(), 0.75 - 0.75 * u, 9 - 9 * u); }, 3); }
   traced.then((tr) => { audio.setEcho(tr); audio.openEcho(4, 0.45); });
-  for (const r of ORDER) { for (const p of rank[r].pipes) organ.setPipe(p, 'unbuilt'); await sleep(90); }
-  const homeQueue = [];
+  for (const r of ORDER) { for (const p of rank[r].pipes) organ.setPipe(p, 'unbuilt'); await sleep(60); }
   const flash = (id) => {
     const p = byId.get(id); if (!p || p === hero) return;
-    const r = rank[p.stop]; r.done++;
+    rank[p.stop].done++;
     organ.setPipe(p, 'voicing');
     setTimeout(() => organ.setPipe(p, 'voiced'), 160);
-    if (r.done === r.pipes.length && !r.sent) { r.sent = true; homeQueue.push(r); }
   };
+  // Pipes already made light up in a rush; the rest as they are finished.
   const pending = [...results.keys()].filter((id) => id !== HERO);
   onVoiced = (id) => pending.push(id);
-  const rush = setInterval(() => { for (let k = Math.max(1, Math.ceil(pending.length / 250)); k > 0 && pending.length; k--) flash(pending.shift()); }, 40);
+  const rush = setInterval(() => { for (let k = Math.max(1, Math.ceil(pending.length / 60)); k > 0 && pending.length; k--) flash(pending.shift()); }, 40);
   storyTimers.push(rush);
-  let homeAt = 0, quietAt = 0, sounding = true;
-  const home = setInterval(() => {
-    const t = now();
-    if (homeQueue.length && t > homeAt) {
-      const r = homeQueue.shift();
-      if (!r.from) { r.from = t; view.moving.add(r); }
-      homeAt = t + 1.3;
-      // Each rank joins a held chord as it comes home, like stops drawn one by one.
-      if (sounding) { chord(r); quietAt = t + 3.4 + 0.6; }
-    }
-  }, 100);
-  storyTimers.push(home);
-  const sII = now();
-  while (coreDone() < 1 || now() - sII < 14 || homeQueue.length) await sleep(200);
-  sounding = false;
-  // Ranks still being voiced go home now, dim; they light as they finish.
-  for (const r of Object.values(rank)) if (!r.from) { r.from = now(); view.moving.add(r); }
-  while (now() < quietAt + 0.8) await sleep(100);
-  // Full organ: silence, then the chord, every sounding pipe and the case at once.
-  const tutti = ORDER.map((n) => rank[n]).filter((r) => r.done === r.pipes.length);
-  for (const r of tutti) chord(r, [50, 54, 57, 62], 4.5);
+  const home = 0;
+  await sleep(1500);
+  // The rows go home one after another, each adding its chord, like stops
+  // drawn one by one. A row still being made goes home dim and lights later.
+  for (const name of ORDER) {
+    const r = rank[name];
+    r.from = now(); view.moving.add(r);
+    if (r.pipes.every((p) => results.has(p.id))) chord(r, [50, 53, 57, 62], 2.6);
+    await sleep(330);
+  }
+  await sleep(1600);
+  // Full organ: a moment's quiet, then one chord.
+  await sleep(800);
+  for (const r of ORDER.map((n) => rank[n]).filter((r) => r.pipes.every((p) => results.has(p.id)))) chord(r, [50, 54, 57, 62], 3.2);
   caseLines.material.opacity = 1;
-  await sleep(5200);
+  await sleep(3600);
   clearInterval(rush); onVoiced = flash; for (const id of pending.splice(0)) flash(id);
   await cardOff();
 
@@ -592,7 +583,7 @@ async function story(heroReady, traced) {
   const tr = await traced;
   if (!audio.make || audio.make === 9) audio.setEcho(tr);
   await sleep(1500);
-  await card('', 'Its echo', 'Mapped through the building, ray by ray, and checked against a recording made there. One chord, slowed twelve times.');
+  await card('', 'Its echo', 'We trace how sound bounces round the building and check it against a real recording made there. Here is one chord, slowed down twelve times.');
   // Into the building as the chord sounds, so the echo is seen from inside.
   cut(ROOM_UI.inside(MID), 3.5);
   await sleep(500);
@@ -724,8 +715,8 @@ async function play(song) {
       w.onmessage = (e) => { if (e.data.done) { w.terminate(); return; } if (!results.has(e.data.id)) { results.set(e.data.id, e.data); onVoiced(e.data.id); } };
       w.postMessage({ sr: SR, pipes: need.filter((_, k) => k % n === i).map((p) => ({ stop: p.stop, key: p.key })), audible: [] });
     }
-    await card('', 'Voicing its pipes', `${need.length} still to voice.`);
-    while (missing().length) { $('#card p').textContent = `${missing().length} still to voice.`; await sleep(300); }
+    await card('', 'Making its pipes', `${need.length} to go.`);
+    while (missing().length) { $('#card p').textContent = `${missing().length} to go.`; await sleep(300); }
   }
   const voiced = Object.fromEntries([...results.values()].map((v) => [v.id, v.params]));
   const groups = ORGAN_SOURCES.map((id) => arr.events.filter((e) => organSource(e, STOPS[e.stop].feet).id === id));
