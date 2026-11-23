@@ -19,7 +19,11 @@
 
   #intro { position: fixed; inset-inline-start: var(--l); inset-block-end: var(--b); margin-inline-end: var(--r); max-width: 30em; display: flex; flex-direction: column; gap: 18px; }
   #intro h1 { font-weight: 300; font-size: clamp(40px, 7vw, 72px); line-height: 1; letter-spacing: -0.03em; }
-  #intro h1 span { display: block; margin-top: 10px; font-size: 0.3em; letter-spacing: 0; color: var(--dim); }
+  #intro h1 span { display: block; margin-top: 12px; font-size: max(17px, 0.3em); line-height: 1.3; letter-spacing: 0; color: var(--ink); }
+  #intro .go { display: flex; align-items: center; gap: 24px; }
+  #intro .go a { display: inline-flex; align-items: center; min-block-size: 44px; color: #a9a7a1; text-underline-offset: 4px; text-decoration-color: var(--neon); }
+  #intro .go a:active { color: var(--neon); }
+  @media (hover: hover) and (pointer: fine) { #intro .go a:hover { color: var(--ink); } }
   #intro p { color: #a9a7a1; }
   #rooms { display: flex; gap: 22px; }
   #rooms a { min-block-size: 44px; min-inline-size: 44px; display: inline-flex; align-items: center; color: var(--dim); text-decoration: none; border-block-end: 1px solid transparent; }
@@ -42,7 +46,6 @@
   #steps li.done { color: var(--ink); }
   #steps p { margin-top: 18px; max-width: 18em; min-height: 3em; color: #a9a7a1; transition: opacity 0.2s; }
 
-  #count { position: fixed; inset-inline-end: var(--r); inset-block-start: calc(var(--t) + 56px); color: var(--dim); }
   /* Top right, clear of the cards and lists at the bottom and left. */
   .ctl { all: unset; position: fixed; inset-inline-end: var(--r); inset-block-start: var(--t); cursor: pointer; min-block-size: 44px; min-inline-size: 44px; padding-inline: 18px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #3e3d3a; color: #a9a7a1; transition: opacity 1s ease-out; }
   @media (hover: hover) and (pointer: fine) { .ctl:hover { color: var(--neon); border-color: var(--neon); } }
@@ -96,13 +99,12 @@
 <body>
 <canvas id="c"></canvas>
 <section id="intro" class="fade">
-  <h1>The Voicer<span id="roomname">York Cathedral</span></h1>
-  <p>No recordings. Every pipe is built and tuned in front of you. Best with headphones.</p>
-  <button id="begin">Begin</button>
+  <h1>The Voicer<span>A robot pipe organ, built from real physics.</span></h1>
+  <p>Every pipe is made and tuned in front of you, then played in <span id="roomname">York Cathedral</span>. Best with headphones.</p>
+  <div class="go"><button id="begin">Begin</button><a href="how.html">How we built it</a></div>
 </section>
 <div id="card" class="fade gone" aria-live="polite"><small class="num"></small><h2></h2><p></p></div>
 <div id="steps" class="fade gone"><ol class="num"><li data-k="cut">Cut-up</li><li data-k="length">Length</li><li data-k="toe">Toe</li><li data-k="nick">Nicks</li></ol><p></p></div>
-<div id="count" class="num fade gone"></div>
 <div id="progress"></div>
 <button id="skip" class="ctl fade gone">Skip</button>
 <button id="stopbtn" class="ctl fade gone">Stop</button>
@@ -110,10 +112,9 @@
   <p class="label num">Songs</p>
   <ol id="songs"></ol>
   <button id="liveopen" class="primary">Play it yourself</button>
-  <p class="label num">Bring your own (beta)</p>
-  <form id="find"><input id="q" type="search" placeholder="Search for a song (beta)" autocomplete="off" aria-label="Search for a song (beta)"></form>
+  <p class="label num">Find a song (beta)</p>
+  <form id="find"><input id="q" type="search" placeholder="Search for a song" autocomplete="off" aria-label="Search for a song (beta)"></form>
   <ol id="results"></ol>
-  <button id="ownmidi" class="plain">Your own MIDI file (beta)</button>
   <a class="how" href="how.html">How we built it <span aria-hidden="true">→</span></a>
 </section>
 <section id="live" class="fade gone" aria-label="Play the organ">

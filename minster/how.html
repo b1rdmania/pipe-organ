@@ -19,6 +19,12 @@
   @media (hover: hover) and (pointer: fine) { .bar a:hover { color: var(--ink); } }
   section, #contents { scroll-margin-block-start: 60px; }
   h1 { color: var(--ink); font-weight: 300; font-size: clamp(36px, 7vw, 60px); line-height: 1; letter-spacing: -0.03em; margin-block: 24px 16px; }
+  .cta { display: inline-flex; align-items: center; justify-content: center; min-block-size: 52px; padding-inline: 28px; border: 1px solid var(--neon); color: var(--ink); text-decoration: none; font-size: 17px; }
+  .cta::after { content: "→"; margin-inline-start: 12px; color: var(--neon); }
+  .cta:active { background: var(--neon); color: #000; }
+  @media (hover: hover) and (pointer: fine) { .cta:hover { background: rgba(255, 61, 110, 0.12); } }
+  .by { margin-block-start: 10px; color: var(--dim); font-size: 15px; }
+  .by a { color: var(--body); }
   .lede { font-size: clamp(18px, 2.2vw, 21px); color: var(--ink); }
   .toc { position: relative; }
   .toc summary { list-style: none; display: flex; align-items: center; gap: 8px; min-block-size: 44px; cursor: pointer; color: var(--body); font-size: 15px; }
@@ -92,7 +98,7 @@
 </head>
 <body>
 <main>
-  <div class="bar"><a href="app.html">← The Voicer</a>
+  <div class="bar"><a href="app.html">← Play The Voicer</a>
   <details class="toc"><summary>Contents</summary><ol>
     <li><a href="#pipe"><span>01</span>The pipe</a></li>
     <li><a href="#voicing"><span>02</span>Voicing</a></li>
@@ -102,19 +108,20 @@
     <li><a href="#check"><span>06</span>How we check it</a></li>
     <li><a href="#space"><span>07</span>Sound in space</a></li>
     <li><a href="#songs"><span>08</span>Songs into organ music</a></li>
-    <li><a href="#limits"><span>09</span>What isn't done yet</a></li>
+    <li><a href="#limits"><span>09</span>What is not done yet</a></li>
     <li><a href="#sources"><span>10</span>Sources</a></li>
   </ol></details>
   </div>
   <h1>How we built it</h1>
   <p class="lede">This started with <a href="https://github.com/jamesondh/chimera-vocal-synth">Chimera</a>, a voice synthesiser that builds a singing voice from a simulated throat: lungs, vocal folds, mouth, and no recordings. After using it for <a href="https://github.com/b1rdmania/chimera-10cc">a cover of 10cc's I'm Not in Love</a>, I started thinking about organs. The pipe organ was the original robot: a machine that turns air into music. I love reverb, and I love Bach's organ music, so I wanted to see whether I could model a real pipe organ in a real cathedral, convincingly, without melting my MacBook Air.</p>
-  <p>This is how it works. No recordings of pipes are used anywhere. Every sound is worked out live from how air moves through a pipe and how sound moves through the building.</p>
-
-
+  <p><a class="cta" href="app.html">Play The Voicer</a></p>
+  <p class="by">Made by Andy. <a href="https://x.com/b1rdmania">X</a> · <a href="https://github.com/b1rdmania">GitHub</a> · <a href="https://github.com/b1rdmania/pipe-organ">The source code</a></p>
+  <p>This page tells how it works. The app uses no recordings of pipes. It calculates each sound live, from how air moves through a pipe and how sound moves through the building.</p>
 
   <section id="pipe">
     <h2><span>01</span>The pipe</h2>
-    <p>Most organ pipes are <b>flue pipes</b>.<sup><a href="#s-pipe">3</a></sup> They have no reed and no moving parts. Air from the wind chest enters through a small hole in the tip of the foot (the <b>toe</b>), rises through the foot, and is squeezed through a narrow slit (the <b>flue</b>) between the front of the foot and a flat plate called the <b>languid</b>. That makes a thin sheet of air, the <b>jet</b>, which shoots up across the <b>mouth</b> and hits the sharp <b>upper lip</b>.</p>
+    <p>Most organ pipes are <b>flue pipes</b>.<sup><a href="#s-pipe">3</a></sup> A flue pipe has no reed and no parts that move.</p>
+    <p>Air from the windchest goes into a small hole at the bottom of the foot. This hole is the <b>toe</b>. The air goes up through the foot. Then it goes through a narrow slot, the <b>flue</b>, between the front of the foot and a flat plate, the <b>languid</b>. The flue makes a thin sheet of air, the <b>jet</b>. The jet moves up across the <b>mouth</b> and hits the sharp <b>upper lip</b>.</p>
     <figure>
       <div class="stage tall" id="fig-pipe"></div>
       <div class="controls">
@@ -124,15 +131,16 @@
         <label class="slider">Wind <input type="range" id="pipe-wind" min="0.5" max="1.3" value="1" step="0.01"><output id="pipe-wind-out"></output></label>
       </div>
       <p class="readout" id="pipe-readout" aria-live="polite"></p>
-      <figcaption>Figure 1. One of our pipes, drawn from its real speaking length; drag to turn it. Change its length, the height of its mouth and its wind, then play it: the model works out the note it actually speaks. Lower the mouth far enough and it leaps to a higher note, which is what voicing has to fix.</figcaption>
+      <figcaption>Figure 1. One of our pipes, drawn at its real speaking length. Drag the drawing to turn it. Change the length, the height of the mouth and the wind. Then play the pipe. The model calculates the note that the pipe makes. If the mouth is too low, the pipe jumps to a higher note. Voicing corrects this fault.</figcaption>
     </figure>
-    <p>A jet hitting an edge is unstable: it flips between going inside and outside the lip. On its own that would make only a faint hiss. Above the mouth, though, sits the <b>body</b>: a column of air with its own natural frequencies. Each flip of the jet pushes air into the column; the column's pressure wave travels up, reflects at the top, comes back and bends the jet the other way. The jet and the column lock together. That loop is what makes a pipe speak.</p>
+    <p>A jet that hits an edge is not stable. It moves quickly from the inside of the lip to the outside and back. Without a pipe, this makes only a quiet hiss.</p>
+    <p>Above the mouth is the <b>body</b>: a column of air with its own natural frequencies. Each movement of the jet pushes air into the column. A pressure wave goes up the column, reflects at the top and comes back. The returning wave moves the jet to the other side. The jet and the column then lock together. This loop makes the pipe speak.</p>
     <h3>The note</h3>
-    <p>An open pipe sounds when its column holds half a wavelength; a stopped pipe (capped at the top) holds a quarter, so it sounds an octave lower for the same length:</p>
+    <p>An open pipe speaks when its air column holds half a wavelength. A stopped pipe has a cap at the top. Its air column holds a quarter of a wavelength. Thus a stopped pipe speaks an octave lower than an open pipe of the same length.</p>
     <span class="eq">f ≈ c / 2L   (open)        f ≈ c / 4L   (stopped)        c ≈ 343 m/s</span>
-    <p>So middle C (262 Hz) needs an open pipe about 65 cm long, and the lowest note of the York Minster 32′ pedal stop (16 Hz) a pipe of about 10.5 m. The organ's "feet" (8′, 4′, 16′, 32′) are the length of its lowest open pipe in feet.</p>
+    <p>Middle C (262 Hz) needs an open pipe of about 65 cm. The lowest note of the York Minster 32′ pedal stop (16 Hz) needs a pipe of about 10.5 m. The "feet" of a stop (8′, 4′, 16′, 32′) give the length of its lowest open pipe.</p>
     <h3>Our model</h3>
-    <p>We use a <b>jet-drive digital waveguide</b>, a standard way to model wind instruments.<sup><a href="#s-jos">1</a></sup><sup><a href="#s-wg">2</a></sup> It has four parts, each one a few lines of code, run 48,000 times a second for every pipe that sounds:</p>
+    <p>We use a <b>jet-drive digital waveguide</b>. This is a standard method to model wind instruments.<sup><a href="#s-jos">1</a></sup><sup><a href="#s-wg">2</a></sup> The model has four parts. Each part is a few lines of code. The code operates 48,000 times each second for each pipe that sounds.</p>
     <figure>
       <svg viewBox="0 0 640 220" role="img" aria-label="The pipe model as a loop: wind makes a jet, the jet travels across the mouth (a delay), meets the lip (a soft limit), drives the air column (a delay the length of the pipe), whose reflection comes back to bend the jet." style="inline-size:100%;block-size:auto">
         <g fill="none" stroke="#5d5b57" stroke-width="1.5">
@@ -148,82 +156,92 @@
           <text x="405" y="206">reflection bends the jet</text><text x="75" y="22">toe sets pressure</text>
         </g>
       </svg>
-      <figcaption>Figure 2. The loop inside every pipe. The air column's returning wave feeds back to the jet; when the loop's total delay matches one of the column's modes, the pipe speaks that note.</figcaption>
+      <figcaption>Figure 2. The loop in each pipe. The wave that returns from the air column moves the jet. When the total delay of the loop agrees with a mode of the air column, the pipe makes that note.</figcaption>
     </figure>
     <ul>
-      <li><b>The jet</b> is a delay line. Its length is the time the jet takes to cross the mouth: the height of the mouth (the <b>cut-up</b>) divided by the jet's speed. The speed comes from the pressure at the foot, <code>U = √(2p / ρ)</code>, so closing the toe slows the jet and lengthens the delay.</li>
-      <li><b>The lip</b> is a soft limit, a cubic curve that saturates: the jet can only put so much air into the pipe. An offset in the curve (the jet aimed slightly off the lip) adds the even harmonics that give a principal its edge.</li>
-      <li><b>The air column</b> is a second delay line, one period long, with a reflection at the top: positive for an open pipe, negative for a stopped one, which removes the even harmonics and gives a stopped flute its hollow sound.</li>
-      <li><b>Losses</b> are a gentle low-pass filter in the loop. Its corner sits a fixed number of harmonics above the note, so a rank keeps one tone colour from bass to treble, which is what organ builders call <b>scaling</b>. Radiation from the mouth tilts the sound brighter.</li>
+      <li><b>The jet</b> is a delay line. The delay is the time that the jet needs to cross the mouth. This time is the height of the mouth (the <b>cut-up</b>) divided by the speed of the jet. The pressure at the foot sets the speed, <code>U = √(2p / ρ)</code>. A smaller toe hole gives a slower jet and a longer delay.</li>
+      <li><b>The lip</b> is a soft limit. It is a cubic curve that saturates, because the jet can put only a limited quantity of air into the pipe. An offset in the curve adds even harmonics. These harmonics give a principal its bright edge.</li>
+      <li><b>The air column</b> is a second delay line, one period long. The top of the column reflects the wave. An open pipe reflects it as positive, a stopped pipe as negative. The negative reflection removes the even harmonics. This gives a stopped flute its hollow sound.</li>
+      <li><b>Losses</b> are a gentle low-pass filter in the loop. Its corner frequency is a fixed number of harmonics above the note. Thus a rank keeps one tone colour from bass to treble. Organ builders call this <b>scaling</b>. Radiation from the mouth makes the sound brighter.</li>
     </ul>
-    <p>Two extras make it sound like a real pipe starting rather than a switch: a burst of edge noise at the start (<b>chiff</b>), and a brief pressure surge as the valve under the pipe opens. Turbulence in the jet adds a little noise all the time, and the wind supply wobbles slightly and sags when many pipes play, as a real bellows does.</p>
-    <p>The key fact for what follows: whether the pipe speaks its proper note depends on the jet's travel time compared with the note's period. Around half a period, it speaks its fundamental. Too fast or too slow and it jumps to a higher mode, a note an octave or more above. That is what a voicer has to get right.</p>
+    <p>Two more parts make the start of the note sound real. First, a short burst of edge noise starts each note. Organ builders call this <b>chiff</b>. Second, a short surge of pressure occurs when the valve below the pipe opens.</p>
+    <p>Turbulence in the jet adds a small quantity of noise all the time. The wind supply also moves slightly. When many pipes play, the wind pressure decreases a little, as in a real bellows.</p>
+    <p>One fact is important for the next section. The note that the pipe makes depends on the travel time of the jet, compared with the period of the note. At about half a period, the pipe speaks its correct note. If the jet is too fast or too slow, the pipe jumps to a higher mode. That mode is an octave or more above the correct note. The voicer must prevent this jump.</p>
   </section>
 
   <section id="voicing">
     <h2><span>02</span>Voicing</h2>
-    <p>A new pipe from the workshop is not ready. Real pipes are made deliberately "rough": cut a little long, the mouth cut low, the toe left open, no nicks. A <b>voicer</b> then works on each pipe by ear, one at a time. We built a program that does the same job, measuring instead of listening.</p>
-    <h3>The four adjustments, in a voicer's order</h3>
+    <p>A new pipe from the workshop is not ready to play. Pipe makers make each pipe rough on purpose. The pipe is a little too long, the mouth is too low, the toe is open and the languid has no nicks.</p>
+    <p>A <b>voicer</b> then adjusts each pipe by ear, one pipe at a time. Our program does the same work. It measures each result. It does not listen.</p>
+    <h3>The four adjustments, in the order that a voicer uses</h3>
     <ul>
-      <li><b>Toe.</b> Open or close the hole in the foot. This sets the pressure at the mouth, so the loudness, and it also changes the jet's speed.</li>
-      <li><b>Cut-up.</b> Raise the top of the mouth. A higher cut-up makes the jet's journey longer, rounds the tone, and stops the pipe leaping to a higher note. It can only go up: metal cut away cannot be put back.</li>
-      <li><b>Nicks.</b> Small cuts in the edge of the languid break up the jet's edge noise, so the note starts cleanly. Also one-way.</li>
-      <li><b>Length.</b> Trim or lengthen the top (in real organs, a tuning slide) until the pipe is in tune.</li>
+      <li><b>Toe.</b> The voicer opens or closes the hole in the foot. This sets the pressure at the mouth, and thus the loudness. It also changes the speed of the jet.</li>
+      <li><b>Cut-up.</b> The voicer raises the top of the mouth. A higher cut-up gives the jet a longer travel. The tone becomes rounder, and the pipe stops its jump to a higher note. This adjustment goes in one direction only, because the voicer cannot put back metal that is cut away.</li>
+      <li><b>Nicks.</b> The voicer cuts small nicks in the edge of the languid. The nicks break up the edge noise of the jet. Thus the note starts cleanly. This adjustment also goes in one direction only.</li>
+      <li><b>Length.</b> The voicer makes the top shorter or longer until the pipe is in tune. In a real organ, a tuning slide does this.</li>
     </ul>
-    <h3>What it measures each time</h3>
+    <h3>The measurements after each adjustment</h3>
     <ul>
-      <li><b>Pitch</b> by autocorrelation: how well the sound matches itself shifted by one period. It is accurate to a fraction of a cent (a cent is a hundredth of a semitone).</li>
-      <li><b>Level</b> as the RMS of the steady tone, against the target for the rank.</li>
-      <li><b>Tone</b> as the spectral centroid, the "centre of mass" of the harmonics, counted in harmonics so it means the same at every pitch.</li>
-      <li><b>Onset</b>: how long the note takes to settle, and how much edge noise comes before it.</li>
+      <li><b>Pitch.</b> The program uses autocorrelation. It compares the sound with the same sound one period later. The result is accurate to a part of a cent. A cent is one hundredth of a semitone.</li>
+      <li><b>Level.</b> The program measures the RMS level of the steady tone. It compares this level with the target for the rank.</li>
+      <li><b>Tone.</b> The program measures the spectral centroid, the centre of the harmonics. It counts the centroid in harmonics, so the value has the same meaning at all pitches.</li>
+      <li><b>Onset.</b> The program measures how long the note needs to become steady. It also measures the edge noise before the note.</li>
     </ul>
-    <p>When a pipe jumps to the wrong note, the voicer works out which way to go from the jet's travel time: too long and it gives the pipe more wind; too short and it raises the mouth. Finally it plays the pipe under eight different gusts of turbulence and wind levels, and only passes it if it holds its note every time.</p>
+    <p>Sometimes a pipe jumps to the wrong note. Then the program uses the travel time of the jet to find the correction. If the travel is too long, it gives the pipe more wind. If the travel is too short, it raises the mouth.</p>
+    <p>At the end, the program plays the pipe with eight different patterns of turbulence and wind. It accepts the pipe only when the pipe keeps its note in all eight tests.</p>
     <figure>
-      <div class="legend" aria-hidden="true"><span>Measured after each step of voicing one pipe, live in your browser</span></div>
+      <div class="legend" aria-hidden="true"><span>The measurements after each step of voicing one pipe</span></div>
       <div class="charts" id="fig-voicing"></div>
       <div class="controls"><button class="play" id="voice-play" aria-pressed="false">Play the voicing, step by step</button></div>
       <div class="steps" id="fig-voicing-play" aria-label="Hear each step"></div>
-      <figcaption>Figure 3. Open Diapason D♯4, voiced here as this page loaded. Pitch error is clipped at ±150 cents; the first tries are an octave or more out. Press a step to hear it.</figcaption>
+      <figcaption>Figure 3. Open Diapason D♯4, voiced in your browser when this page opened. The chart limits pitch error to ±150 cents. The first tries are an octave or more wrong. Press a step to hear it.</figcaption>
     </figure>
-    <p>Across all 830 pipes: every pipe ends within about a cent of perfect tuning, and level lands within about 1.2 dB of its target for 90% of pipes. In a stress test with turbulence the voicer never heard, about 0.5% of notes still jumped. That is the honest number, and why a stray wrong note is still possible.</p>
+    <p>We measured all 830 pipes. Each pipe ends within about one cent of perfect tuning. For 90% of the pipes, the level is within about 1.2 dB of its target.</p>
+    <p>We also did a stress test with turbulence patterns that the program did not use. In this test, about 0.5% of notes jumped to the wrong pitch. Thus a wrong note can still occur.</p>
   </section>
 
   <section id="organ">
     <h2><span>03</span>The organ</h2>
-    <p>One pipe makes one note in one tone colour. A row of pipes, one for each key, is a <b>rank</b> or <b>stop</b>. Our organ has seventeen ranks, named from the York Minster stoplist in the National Pipe Organ Register<sup><a href="#s-npor">4</a></sup>: eleven played from the keyboards (manuals) and six from the pedals. That is 830 pipes: 58 per manual rank (C2 to A6) and 32 per pedal rank.</p>
+    <p>One pipe makes one note in one tone colour. A row of pipes, with one pipe for each key, is a <b>rank</b>, or a <b>stop</b>.</p>
+    <p>Our organ has seventeen ranks. Their names come from the York Minster stoplist in the National Pipe Organ Register.<sup><a href="#s-npor">4</a></sup> The organist plays eleven ranks from the keyboards (the manuals) and six ranks from the pedals. Thus the organ has 830 pipes: 58 in each manual rank (C2 to A6) and 32 in each pedal rank.</p>
     <figure>
       <div class="stage" id="fig-organ"></div>
-      <figcaption>Figure 4. All 830 pipes at their real speaking lengths, standing on a windchest: the front rank, the other manual ranks in rows behind, the pedal towers either side. Drag to turn it.</figcaption>
+      <figcaption>Figure 4. All 830 pipes at their real speaking lengths, on a windchest. The front rank is at the front. The other manual ranks stand in rows behind it. The pedal ranks are towers at the two sides. Drag the drawing to turn it.</figcaption>
     </figure>
     <ul>
-      <li><b>Principals and diapasons</b> (8′, 4′, 2′): open metal pipes, the organ's main sound. An 8′ rank sounds at written pitch, a 4′ an octave higher, a 2′ two octaves.</li>
-      <li><b>Stopped and wooden ranks</b>: darker, hollow tones, set by the stopped reflection and a lower loss corner.</li>
-      <li><b>Mixtures</b>: ranks that sound a fifth or an octave above the note, very small pipes. Real mixtures "break back" an octave near the top of the keyboard because the pipes would be too tiny to make; ours do the same.</li>
-      <li><b>Pedal ranks</b> down to 32′: the lowest pipe sounds 16 Hz, felt more than heard, and is slow to start, about 0.7 seconds to reach full voice.</li>
+      <li><b>Principals and diapasons</b> (8′, 4′, 2′) are open metal pipes. They make the main sound of the organ. An 8′ rank sounds at written pitch. A 4′ rank sounds one octave higher, and a 2′ rank two octaves higher.</li>
+      <li><b>Stopped ranks and wooden ranks</b> have darker, hollow tones. The negative reflection and a lower loss corner give these tones.</li>
+      <li><b>Mixtures</b> are ranks that sound a fifth or an octave above the note. Their pipes are very small. Near the top of the keyboard, a real mixture drops back an octave, because the pipes become too small to make. Our mixtures do the same.</li>
+      <li><b>Pedal ranks</b> go down to 32′. The lowest pipe sounds at 16 Hz. You feel this note more than you hear it. This pipe is slow to start. It needs about 0.7 seconds to reach full voice.</li>
     </ul>
-    <p>Every pipe is voiced by the same loop when the app starts, in background threads (Web Workers), while you watch.</p>
+    <p>The same loop voices every pipe when the app starts. The work occurs in background threads (Web Workers) while you watch.</p>
   </section>
 
   <section id="building">
     <h2><span>04</span>The cathedral</h2>
-    <p>To hear the organ in York Minster we need the building's shape and what its surfaces are made of. We drew it as a plan of 0.5 m cells, about 42,000 of them. Each cell is open air from a floor height to a ceiling height, or it is solid (a pier, a wall, outside). Each surface has a material with an absorption figure for six octave bands, from 125 Hz to 4 kHz: limestone absorbs about 2–5%, glass more at low pitch, the boarded vaults and oak stalls more again.</p>
+    <p>To hear the organ in York Minster, the model needs the shape of the building and its materials.</p>
+    <p>We drew the building as a plan of cells. Each cell is 0.5 m square, and the plan has about 42,000 cells. Each cell is open air between a floor height and a ceiling height. Or it is solid: a pier, a wall, or outside.</p>
+    <p>Each surface has a material. Each material has an absorption value for six octave bands, from 125 Hz to 4 kHz. Limestone absorbs about 2–5% of the sound. Glass absorbs more at low frequencies. The wooden vaults and the oak choir stalls absorb more again.</p>
     <figure>
       <div class="stage" id="fig-plan"></div>
-      <figcaption>Figure 5. York Minster as the acoustic model sees it, from above. Brighter is higher: the nave vault at 29.5 m, the central tower at about 55 m, the aisles at 14 m. The pink marks are the measured recording's source and listener (section 6).</figcaption>
+      <figcaption>Figure 5. York Minster as the acoustic model shows it, from above. A brighter cell is higher. The nave vault is 29.5 m high, the central tower about 55 m and the aisles 14 m. The pink marks show the source and the listener of the measured recording (section 6).</figcaption>
     </figure>
-    <p>Dimensions come from published sources<sup><a href="#s-ym">5</a></sup>: 160 m long outside, the nave 31 m wide and about 29.5 m high, the transepts, the choir at 31 m. Where nothing is published (the height of the vault inside the tower, the size of the piers) we estimated, and the code marks every estimate. The model's volume and shape do the main work; detail smaller than half a metre is left out.</p>
+    <p>The dimensions come from published sources.<sup><a href="#s-ym">5</a></sup> The building is 160 m long outside. The nave is 31 m wide and about 29.5 m high. The choir is 31 m high.</p>
+    <p>For some dimensions, we found no published value. Two examples are the height of the vault in the tower and the size of the piers. For these, we estimated the value. The code marks each estimate. The volume and shape of the building have the largest effect. The model does not include details smaller than half a metre.</p>
   </section>
 
   <section id="echo">
     <h2><span>05</span>The echo</h2>
-    <p>A cathedral's echo is millions of reflections arriving over many seconds. We work it out by <b>ray tracing</b>: firing about 30,000 rays of sound from each part of the organ in every direction and following each through the building.</p>
+    <p>The echo of a cathedral is millions of reflections. They arrive over many seconds. We calculate them with <b>ray tracing</b>.</p>
+    <p>The model sends about 30,000 rays of sound from each part of the organ, in all directions. Then it follows each ray through the building.</p>
     <ul>
-      <li>At every surface a ray loses the share of energy that material absorbs, separately in each of the six bands.</li>
-      <li>It reflects either like a mirror or scattered in a random direction (35% scattered), because carved stone and pews spread sound.</li>
-      <li>Air itself absorbs high frequencies over long distances (the ISO 9613-1 figures<sup><a href="#s-iso9613">6</a></sup>), which is why the top of a cathedral's echo dies first.</li>
-      <li>Whenever a ray passes through a 1.5 m sphere around the listener, its energy and arrival time are recorded.</li>
+      <li>At each surface, a ray loses the part of its energy that the material absorbs. The model does this separately for each of the six bands.</li>
+      <li>The surface reflects the ray in one of two ways. It can reflect the ray as a mirror does. Or it can send the ray in a random direction. The model sends 35% of rays in a random direction, because carved stone and pews spread the sound.</li>
+      <li>Air also absorbs high frequencies over long distances. The model uses the values from ISO 9613-1.<sup><a href="#s-iso9613">6</a></sup> Thus the high frequencies of the echo stop first.</li>
+      <li>When a ray goes through a sphere of 1.5 m around the listener, the model records its energy and its arrival time.</li>
     </ul>
-    <p>The result is an energy histogram for each band: how much sound arrives at each millisecond. From it we measure the echo the way acousticians do. Integrating the energy backwards (the Schroeder integral<sup><a href="#s-schroeder">7</a></sup>) gives a decay curve, measured as ISO 3382-1 sets out<sup><a href="#s-iso3382">8</a></sup>; <b>T30</b> is how long the sound takes to fall by 60 dB, worked out from its slope between −5 and −35 dB.</p>
+    <p>The result is an energy histogram for each band. The histogram shows how much sound arrives in each millisecond.</p>
+    <p>We measure the echo from the histogram as acousticians do. First, we add the energy from the end back to the start. This is the Schroeder integral.<sup><a href="#s-schroeder">7</a></sup> It gives a decay curve. Then we measure the curve as ISO 3382-1 specifies.<sup><a href="#s-iso3382">8</a></sup> <b>T30</b> is the time that the sound needs to decrease by 60 dB. We calculate T30 from the slope of the curve between −5 dB and −35 dB.</p>
     <span class="eq">T30 at 500 Hz, York Minster:   measured 8.37 s   model 8.37 s</span>
     <figure>
       <div class="stage" id="fig-rays"></div>
@@ -232,23 +250,35 @@
         <div class="seg" role="group" aria-label="Sound"><button data-src="clap" aria-pressed="true">Clap</button><button data-src="chord" aria-pressed="false">Chord</button></div>
       </div>
       <p class="readout" id="rays-readout" aria-live="polite"></p>
-      <figcaption>Figure 6. A clap or a chord under the central tower, heard from the nave through the traced echo, while sixty of the traced sound paths cross the plan at the speed of sound slowed twelve times.</figcaption>
+      <figcaption>Figure 6. A clap or a chord below the central tower, heard from the nave through the traced echo. Sixty traced sound paths cross the plan at the speed of sound, divided by twelve.</figcaption>
     </figure>
-    <p>To make it something you can hear, we turn the histogram into a two-ear impulse response: noise shaped in each band to the traced energy, the direct sound arriving first, and each ear getting its own version, with the far ear delayed and shadowed by the head. The organ's sound is then convolved with it live in the browser. In the app, the bright lines are real ray paths from this trace, drawn at the speed of sound slowed twelve times.</p>
+    <p>To make the echo audible, we change the histogram into a two-ear impulse response. Noise in each band gets the shape of the traced energy. The direct sound arrives first. Each ear gets its own version. The sound arrives later at the far ear, and the head blocks part of it.</p>
+    <p>The browser then convolves the sound of the organ with this response, live. In the app, the bright lines are real ray paths from this trace. The app draws them at the speed of sound, divided by twelve.</p>
   </section>
 
   <section id="check">
     <h2><span>06</span>How we check it</h2>
-    <p>The University of York's acoustics lab publishes recordings of real buildings' echoes in its <b>OpenAIR</b> library<sup><a href="#s-openair-york">9</a></sup><sup><a href="#s-openair-sp">10</a></sup>. They play a test sound at one spot and record it at another. For some buildings they record several spots: <b>St Paul's Cathedral has eight</b><sup><a href="#s-foteinou">11</a></sup> (under the dome to the nave, the nave to the dome, both under the dome, the choir, the Geometric Staircase, two in the Whispering Gallery, and the library). York Minster has one pair, from under the central tower to the middle of the nave.</p>
-    <p>We place our source and listener at the same two spots and compare.</p>
+    <p>The acoustics lab of the University of York publishes recordings of the echoes of real buildings. The library of recordings is <b>OpenAIR</b>.<sup><a href="#s-openair-york">9</a></sup><sup><a href="#s-openair-sp">10</a></sup> For each recording, the lab plays a test sound at one position and records it at a second position.</p>
+    <p>For some buildings, the lab recorded several pairs of positions. <b>St Paul's Cathedral has eight.</b><sup><a href="#s-foteinou">11</a></sup> The positions are:</p>
+    <ul>
+      <li>below the dome to the nave, and the nave to below the dome</li>
+      <li>two positions below the dome</li>
+      <li>the choir</li>
+      <li>the Geometric Staircase</li>
+      <li>two positions in the Whispering Gallery</li>
+      <li>the library.</li>
+    </ul>
+    <p>York Minster has one pair, from below the central tower to the middle of the nave.</p>
+    <p>We put our source and our listener at the same two positions. Then we compare the results.</p>
     <figure>
       <div class="legend"><span><i style="border-color:#e9e7e1;border-block-start-style:dashed"></i>Measured in the building</span><span><i style="border-color:#ff3d6e"></i>Our model</span></div>
       <div class="charts" id="fig-t30"></div>
-      <figcaption>Figure 7. Echo time (T30) in six octave bands. "Before tuning" is the model straight from the plan and the material tables: a genuine prediction. "After tuning" adds one correction factor per band, fitted to the same recording.</figcaption>
+      <figcaption>Figure 7. Echo time (T30) in six octave bands. "Before tuning" is the model from the plan and the material tables only. This is a true prediction. "After tuning" adds one correction factor for each band. The factors come from the same recording.</figcaption>
     </figure>
     <div class="wide"><table id="t30-table" aria-label="Echo times in seconds"></table></div>
     <h3>Hear the difference</h3>
-    <p>The same clap or chord, from under York Minster's tower to the middle of the nave: once through the real recorded echo, once through our model. They are matched for loudness. The recording is one microphone; ours is two-ear, so it sounds wider on headphones.</p>
+    <p>Here is the same clap or chord, from below the tower of York Minster to the middle of the nave. You hear it once through the real recorded echo, and once through our model. The two have the same loudness.</p>
+    <p>The recording uses one microphone. Our model gives two ears. Thus our version sounds wider on headphones.</p>
     <figure>
       <div class="controls">
         <button class="play" id="ab-real" aria-pressed="false">The real Minster</button>
@@ -258,46 +288,53 @@
       <p class="readout" id="ab-readout" aria-live="polite"></p>
     </figure>
     <ul>
-      <li><b>Before tuning</b> the model was within 5–10% in York's middle bands and within 2–13% in every band at St Paul's. The low bands at York came out short: the real building has more low-frequency echo than the material tables suggest.</li>
-      <li><b>After tuning</b> it matches within about 1%, but that is a fit to one recording, not an independent test.</li>
-      <li><b>The independent test</b> is the other positions. We tuned St Paul's to the dome-to-nave pair only; the other seven recordings let us check whether the model captures the building or just one measurement. That check has not been run yet.</li>
-      <li>What you actually hear is within about 5% up to 2 kHz. It runs about 20% long at 4 kHz, and the early sound in the lowest bands is 5–7 dB weaker than the real building, which can sound muddy; we filter some low end out of the echo to compensate.</li>
+      <li><b>Before tuning,</b> the model was within 5–10% in the middle bands at York. At St Paul's, it was within 2–13% in all bands. At York, the low bands were too short. The real building has more low-frequency echo than the material tables show.</li>
+      <li><b>After tuning,</b> the model agrees with the recording within about 1%. But the tuning comes from the same recording. Thus this result is a fit, not an independent test.</li>
+      <li><b>The independent test</b> uses the other positions. We tuned St Paul's with the pair from below the dome to the nave only. The seven other recordings can show if the model gives the building, or only one measurement. We have not done this test yet.</li>
+      <li><b>The sound that you hear</b> is within about 5% up to 2 kHz. At 4 kHz, it is about 20% too long. In the lowest bands, the early sound is 5–7 dB weaker than in the real building. This can sound muddy. Thus we remove some low frequencies from the echo.</li>
     </ul>
-    <p>For the organ itself, the check is internal: every pipe's pitch, level, tone and steadiness are measured, as in section 2. What is not verified is whether the result sounds like York's actual organ. That needs a blind listening test and a recording of the real instrument playing the same notes.</p>
+    <p>For the organ, the check is internal. Section 2 tells how the program measures the pitch, level, tone and steadiness of each pipe. We have not verified that the organ sounds like the real York organ. That needs a blind listening test and a recording of the real organ that plays the same notes.</p>
   </section>
 
   <section id="space">
     <h2><span>07</span>Sound in space</h2>
-    <p>The organ is not one point. It is split into six sources: the main manual pipes, the small upper work and the pedal, each in two halves (C side and C♯ side, as real organs alternate notes left and right). Each source sits where its pipes are drawn.</p>
+    <p>The organ is not one point. It has six sources: the main manual pipes, the small upper ranks and the pedal pipes. Each of these is in two halves, the C side and the C♯ side. Real organs put alternate notes on the left and the right. Each source is where its pipes are drawn.</p>
     <ul>
-      <li>The <b>direct sound</b> from each source goes through the browser's head-related transfer function (HRTF)<sup><a href="#s-hrtf">12</a></sup><sup><a href="#s-panner">13</a></sup>: filters measured on human heads that place a sound left, right, above or behind.</li>
-      <li>The <b>echo</b> comes from the traced two-ear response for that part of the organ.</li>
-      <li>The <b>listener is the camera</b>. As it moves and turns, the direct sound moves around your head, and its level falls with distance exactly as the traced echo assumes (amplitude in proportion to 1 / distance), so the two stay in the right balance.</li>
+      <li>The <b>direct sound</b> from each source goes through the head-related transfer function (HRTF) of the browser.<sup><a href="#s-hrtf">12</a></sup><sup><a href="#s-panner">13</a></sup> The HRTF is a set of filters, measured on human heads. It puts a sound to the left, the right, above or behind.</li>
+      <li>The <b>echo</b> for each part of the organ comes from the traced two-ear response for that part.</li>
+      <li>The <b>listener is the camera.</b> When the camera moves or turns, the direct sound moves around your head. Its level decreases with distance, in proportion to 1 / distance. The traced echo uses the same rule. Thus the direct sound and the echo keep the correct balance.</li>
     </ul>
   </section>
 
   <section id="songs">
     <h2><span>08</span>Songs into organ music</h2>
-    <p>A pop song's MIDI file is written for a band: drums, bass, guitars, pads, a vocal line. An organist arranging it would not play every track on every stop. Our arranger does what they would:</p>
+    <p>The MIDI file of a pop song is for a band: drums, bass, guitars, pads and a vocal line. An organist does not play each track on each stop. Our arranger does the work of an organist.</p>
     <ul>
-      <li><b>Roles.</b> Each track becomes the tune, the harmony or the bass. Drums are dropped as sound but used to find the song's sections.</li>
-      <li><b>Divisions.</b> The tune goes on the <b>Great</b>, the harmony on the <b>Swell</b>, whose pipes stand in a box with shutters, so it sits underneath and can swell and fade with the song's own volume changes. The bass goes to the <b>pedals</b>, moved as a whole line, with the 16′ and 32′ stops coming in for the choruses.</li>
-      <li><b>The section.</b> Instead of the first 40 seconds (often a slow intro), it finds the chorus by looking for the most-repeated block of music.</li>
-      <li><b>The echo.</b> Notes that repeat very fast smear in an eight-second echo, so they are thinned, and the whole song plays at 82% speed, as an organist in a cathedral would slow down.</li>
+      <li><b>Roles.</b> Each track becomes the tune, the harmony or the bass. The arranger does not play the drums. But it uses them to find the sections of the song.</li>
+      <li><b>Divisions.</b> The tune goes on the <b>Great</b>. The harmony goes on the <b>Swell</b>. The Swell pipes stand in a box with shutters. Thus the harmony is quieter than the tune, and it follows the volume changes in the song. The bass goes on the <b>pedals</b>. The arranger moves the bass line as one unit. The 16′ and 32′ stops start at the chorus.</li>
+      <li><b>The section.</b> The first 40 seconds of a song are often a slow introduction. Thus the arranger finds the chorus. It looks for the block of music that repeats most.</li>
+      <li><b>The echo.</b> Very fast repeated notes become unclear in an echo of eight seconds. Thus the arranger removes some of them. The full song plays at 82% speed, as an organist in a cathedral plays more slowly.</li>
     </ul>
-    <p>We check each arrangement with numbers before anyone listens: how much of the original's notes it keeps (72–78% for the pop songs, up from 18–61%), whether every pitch class and the bass line survive, and how loud each part is in a dry render. Bach's organ works are detected as organ music and play exactly as written. Some of the Bach MIDI files come from the Mutopia Project<sup><a href="#s-mutopia">14</a></sup>; a song search uses BitMidi<sup><a href="#s-bitmidi">15</a></sup>.</p>
+    <p>We check each arrangement with numbers before a person listens to it. We measure how many of the original notes it keeps. For the pop songs, this is 72–78%. Before, it was 18–61%. We also measure if each pitch class and the bass line stay, and how loud each part is in a render without echo.</p>
+    <p>The arranger finds the organ works of Bach and plays them as written. Some of the Bach MIDI files come from the Mutopia Project.<sup><a href="#s-mutopia">14</a></sup> The song search uses BitMidi.<sup><a href="#s-bitmidi">15</a></sup></p>
   </section>
 
   <section id="limits">
-    <h2><span>09</span>What isn't done yet</h2>
+    <h2><span>09</span>What is not done yet</h2>
     <ul>
-      <li><b>No reed stops.</b> Trumpets and tubas work differently (a vibrating brass tongue), and they would carry a pop tune best.</li>
-      <li><b>Not compared with the real York organ.</b> The stop names are York's, but pipe scales and wind pressures are generic.</li>
-      <li><b>No blind listening test</b> of our echo against the recorded one.</li>
-      <li><b>The held-back positions</b> at St Paul's are still to be checked.</li>
+      <li><b>No reed stops.</b> Trumpets and tubas work differently: a brass tongue vibrates. They are the best stops to play a pop tune.</li>
+      <li><b>No comparison with the real York organ.</b> The stop names come from York. The pipe scales and wind pressures are general values.</li>
+      <li><b>No blind listening test</b> of our echo against the recorded echo.</li>
+      <li><b>The other positions</b> at St Paul's are not yet tested.</li>
       <li><b>About 0.5% of notes</b> can still jump to the wrong pitch.</li>
-      <li><b>Phones:</b> it runs on recent iPhones; the full-organ Bach is heavy, and with the side switch on silent, Safari plays no sound.</li>
+      <li><b>Phones.</b> The app operates on recent iPhones. The full-organ Bach needs much processing power. When the side switch is on silent, Safari plays no sound.</li>
     </ul>
+  </section>
+
+  <section id="play">
+    <h2>Now hear it</h2>
+    <p>The app builds the pipe, the organ and the echo in front of you. Then you can play songs, or play the organ yourself.</p>
+    <p><a class="cta" href="app.html">Play The Voicer</a></p>
   </section>
 
   <section id="sources">
@@ -323,7 +360,7 @@
   </section>
 
   <footer>
-    Impulse responses: OpenAIR, University of York (CC BY 4.0), York Minster; St Paul's Cathedral (Foteinou, Stevens and Murphy, 2022). Stoplist: National Pipe Organ Register. Source code: <a href="https://github.com/b1rdmania/pipe-organ">github.com/b1rdmania/pipe-organ</a>.
+    Impulse responses: OpenAIR, University of York (CC BY 4.0). York Minster, and St Paul's Cathedral (Foteinou, Stevens and Murphy, 2022). Stoplist: National Pipe Organ Register. Source code: <a href="https://github.com/b1rdmania/pipe-organ">github.com/b1rdmania/pipe-organ</a>. Made by Andy: <a href="https://x.com/b1rdmania">X</a> · <a href="https://github.com/b1rdmania">GitHub</a>.
   </footer>
 </main>
 <script type="module" src="how.js"></script>

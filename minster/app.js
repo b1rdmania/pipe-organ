@@ -319,7 +319,8 @@ const leftThird = (target, d) => {
   const a = [target[0] + rx * w, target[1] + ry * w, target[2]];
   return { p: [a[0] - fx * d, a[1] - fy * d, a[2]], a };
 };
-view.shot = () => { const f = hero.face ?? 0, d = heroDist() * 1.25; return { p: [HC[0] - Math.cos(f) * d, HC[1] - Math.sin(f) * d, HC[2]], a: HC }; };
+// On a tall screen, aim lower so the pipe stands clear of the text below it.
+view.shot = () => { const f = hero.face ?? 0, d = heroDist() * (portrait() ? 1.6 : 1.25), z = HC[2] - (portrait() ? hero.h * 0.42 : 0); return { p: [HC[0] - Math.cos(f) * d, HC[1] - Math.sin(f) * d, z], a: [HC[0], HC[1], z] }; };
 
 $('#begin').onclick = async () => {
   $('#begin').disabled = true;
@@ -420,16 +421,11 @@ async function story(heroReady, traced) {
   // II. The organ, as an exploded drawing: a long lens, three-quarter high,
   // every rank on its own layer, swinging to dead front as the ranks close.
   const total = pipes.length;
-  const count = $('#count');
-  const done = () => results.size;
-  count.classList.remove('gone');
-  const tick = setInterval(() => { count.textContent = `${done()} / ${total}`; }, 200);
-  storyTimers.push(tick);
   lens(20, 3);
   await card('II', 'The organ', `Seventeen rows like that make the organ: ${total} pipes.`);
-  const R = () => caseDist() * 1.9;
+  const R = () => caseDist() * (portrait() ? 1.6 : 2.15);
   // Swing from three-quarter to dead front while the rows go home.
-  { const s0 = now(); cut((t) => { const u = ease((t - s0) / 9); return orbit([MID[0] - 3, MID[1], MID[2]], R(), 0.75 - 0.75 * u, 9 - 9 * u); }, 3); }
+  { const s0 = now(); cut((t) => { const u = ease((t - s0) / 9); return orbit([MID[0] - 3, MID[1], MID[2] + 1.5], R(), 0.75 - 0.75 * u, 9 - 9 * u); }, 3); }
   traced.then((tr) => { audio.setEcho(tr); audio.openEcho(4, 0.45); });
   for (const r of ORDER) { for (const p of rank[r].pipes) organ.setPipe(p, 'unbuilt'); await sleep(60); }
   const flash = (id) => {
@@ -508,8 +504,6 @@ async function story(heroReady, traced) {
   church = 0.55; reveal(1); if (bloom) bloom.strength = 0.55;
   fog(0.009);
   await cut(PLAY_SHOT(), 3.5);
-  clearInterval(tick);
-  const end = setInterval(() => { if (done() >= total) { count.classList.add('gone'); clearInterval(end); } else count.textContent = `${done()} / ${total}`; }, 400);
 
   // IV. Play
   await card('IV', 'Choose something to play', '', 1300);
@@ -532,8 +526,6 @@ function toPlay(traced) {
   church = 0.55; reveal(1); fog(0.009); if (bloom) bloom.strength = 0.55;
   S.camera.fov = baseFov; S.camera.updateProjectionMatrix();
   traced.then((tr) => { audio.setEcho(tr); audio.openEcho(1.5, 1); });
-  const count = $('#count');
-  const tick = setInterval(() => { if (results.size >= pipes.length) { count.classList.add('gone'); clearInterval(tick); } else { count.classList.remove('gone'); count.textContent = `${results.size} / ${pipes.length}`; } }, 400);
   cut(PLAY_SHOT(), 2.5);
   list.draw();
   $('#ui').classList.remove('gone');
@@ -712,9 +704,19 @@ function openLive() {
   church = 0.3; reveal(1); if (bloom) bloom.strength = 0.95;
   buildStops(); buildKeys(); midiIn();
   cut(PLAY_SHOT(), 2);
+  liftView();
   card('', 'Play it yourself', 'Use the keys, your computer keyboard (A to K), or a MIDI keyboard.').then(() => sleep(4000)).then(cardOff);
 }
+// While the keyboard is up, move the picture up by half the panel's height,
+// so the organ sits in the clear space above the keys.
+function liftView(on = true) {
+  const w = innerWidth, h = innerHeight, lift = on ? Math.round($('#live').getBoundingClientRect().height / 2) : 0;
+  if (lift) S.camera.setViewOffset(w, h, 0, lift, w, h); else S.camera.clearViewOffset();
+  S.camera.updateProjectionMatrix();
+}
+addEventListener('resize', () => { if (live.on) liftView(); });
 function closeLive() {
+  liftView(false);
   for (const k of [...live.held.keys()]) keyUp(k);
   live.on = false; clearInterval(liveSync);
   document.body.classList.remove('live');

@@ -1,4 +1,4 @@
-// The song list: the built-in songs, your own MIDI file, and a BitMidi search.
+// The song list: the built-in songs and a BitMidi search.
 // Pop songs: the arranger finds the chorus and orchestrates every part for the
 // organ (engine/orchestrate.js). Bach's organ works play as written.
 export const SONGS = [
@@ -17,12 +17,6 @@ export function songList(play) {
   let current = null;
   const add = (song) => { SONGS.push(song); choose(song); };
   const choose = (song) => { current = song; draw(); play(song); };
-  const pick = Object.assign(document.createElement('input'), { type: 'file', accept: '.mid,.midi,audio/midi' });
-  pick.onchange = async () => {
-    const f = pick.files[0]; if (!f) return;
-    add({ title: f.name.replace(/\.midi?$/i, ''), by: 'your MIDI', data: await f.arrayBuffer() });
-  };
-  $('#ownmidi').onclick = () => pick.click();
   function draw() {
     const ol = $('#songs'); ol.innerHTML = '';
     for (const s of SONGS) {
