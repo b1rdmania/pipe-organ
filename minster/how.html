@@ -116,7 +116,7 @@
   <p class="lede">This started with <a href="https://github.com/jamesondh/chimera-vocal-synth">Chimera</a>, a voice synthesiser that builds a singing voice from a simulated throat: lungs, vocal folds, mouth, and no recordings. After using it for <a href="https://github.com/b1rdmania/chimera-10cc">a cover of 10cc's I'm Not in Love</a>, I started thinking about organs. The pipe organ was the original robot: a machine that turns air into music. I love reverb, and I love Bach's organ music, so I wanted to see whether I could model a real pipe organ in a real cathedral, convincingly, without melting my MacBook Air.</p>
   <p><a class="cta" href="app.html">Play The Voicer</a></p>
   <p class="by">Made by Andy. <a href="https://x.com/b1rdmania">X</a> · <a href="https://github.com/b1rdmania">GitHub</a> · <a href="https://github.com/b1rdmania/pipe-organ">The source code</a></p>
-  <p>This page tells how it works. The app uses no recordings of pipes. It calculates each sound live, from how air moves through a pipe and how sound moves through the building.</p>
+  <p>This page tells how it works. The app calculates each sound live, from how air moves through a pipe and how sound moves through the building.</p>
 
   <section id="pipe">
     <h2><span>01</span>The pipe</h2>
@@ -131,7 +131,7 @@
         <label class="slider">Wind <input type="range" id="pipe-wind" min="0.5" max="1.3" value="1" step="0.01"><output id="pipe-wind-out"></output></label>
       </div>
       <p class="readout" id="pipe-readout" aria-live="polite"></p>
-      <figcaption>Figure 1. One of our pipes, drawn at its real speaking length. Drag the drawing to turn it. Change the length, the height of the mouth and the wind. Then play the pipe. The model calculates the note that the pipe makes. If the mouth is too low, the pipe jumps to a higher note. Voicing corrects this fault.</figcaption>
+      <figcaption>Figure 1. One of our pipes, drawn at its real speaking length. Drag the drawing to turn it. Change the length, the height of the mouth and the wind. Then play the pipe. The model calculates the note that the pipe makes.</figcaption>
     </figure>
     <p>A jet that hits an edge is not stable. It moves quickly from the inside of the lip to the outside and back. Without a pipe, this makes only a quiet hiss.</p>
     <p>Above the mouth is the <b>body</b>: a column of air with its own natural frequencies. Each movement of the jet pushes air into the column. A pressure wave goes up the column, reflects at the top and comes back. The returning wave moves the jet to the other side. The jet and the column then lock together. This loop makes the pipe speak.</p>
@@ -224,7 +224,7 @@
     <p>Each surface has a material. Each material has an absorption value for six octave bands, from 125 Hz to 4 kHz. Limestone absorbs about 2–5% of the sound. Glass absorbs more at low frequencies. The wooden vaults and the oak choir stalls absorb more again.</p>
     <figure>
       <div class="stage" id="fig-plan"></div>
-      <figcaption>Figure 5. York Minster as the acoustic model shows it, from above. A brighter cell is higher. The nave vault is 29.5 m high, the central tower about 55 m and the aisles 14 m. The pink marks show the source and the listener of the measured recording (section 6).</figcaption>
+      <figcaption>Figure 5. York Minster as the acoustic model shows it, from above. A brighter cell is higher. The central tower is about 55 m high and the aisles 14 m. The pink marks show the source and the listener of the measured recording (section 6).</figcaption>
     </figure>
     <p>The dimensions come from published sources.<sup><a href="#s-ym">5</a></sup> The building is 160 m long outside. The nave is 31 m wide and about 29.5 m high. The choir is 31 m high.</p>
     <p>For some dimensions, we found no published value. Two examples are the height of the vault in the tower and the size of the piers. For these, we estimated the value. The code marks each estimate. The volume and shape of the building have the largest effect. The model does not include details smaller than half a metre.</p>
@@ -253,7 +253,7 @@
       <figcaption>Figure 6. A clap or a chord below the central tower, heard from the nave through the traced echo. Sixty traced sound paths cross the plan at the speed of sound, divided by twelve.</figcaption>
     </figure>
     <p>To make the echo audible, we change the histogram into a two-ear impulse response. Noise in each band gets the shape of the traced energy. The direct sound arrives first. Each ear gets its own version. The sound arrives later at the far ear, and the head blocks part of it.</p>
-    <p>The browser then convolves the sound of the organ with this response, live. In the app, the bright lines are real ray paths from this trace. The app draws them at the speed of sound, divided by twelve.</p>
+    <p>The browser then convolves the sound of the organ with this response, live. In the app, the bright lines are real ray paths from this trace.</p>
   </section>
 
   <section id="check">
@@ -293,7 +293,7 @@
       <li><b>The independent test</b> uses the other positions. We tuned St Paul's with the pair from below the dome to the nave only. The seven other recordings can show if the model gives the building, or only one measurement. We have not done this test yet.</li>
       <li><b>The sound that you hear</b> is within about 5% up to 2 kHz. At 4 kHz, it is about 20% too long. In the lowest bands, the early sound is 5–7 dB weaker than in the real building. This can sound muddy. Thus we remove some low frequencies from the echo.</li>
     </ul>
-    <p>For the organ, the check is internal. Section 2 tells how the program measures the pitch, level, tone and steadiness of each pipe. We have not verified that the organ sounds like the real York organ. That needs a blind listening test and a recording of the real organ that plays the same notes.</p>
+    <p>For the organ, the check is internal. Section 2 tells how the program measures the pitch, level, tone and steadiness of each pipe.</p>
   </section>
 
   <section id="space">
@@ -323,10 +323,8 @@
     <h2><span>09</span>What is not done yet</h2>
     <ul>
       <li><b>No reed stops.</b> Trumpets and tubas work differently: a brass tongue vibrates. They are the best stops to play a pop tune.</li>
-      <li><b>No comparison with the real York organ.</b> The stop names come from York. The pipe scales and wind pressures are general values.</li>
-      <li><b>No blind listening test</b> of our echo against the recorded echo.</li>
-      <li><b>The other positions</b> at St Paul's are not yet tested.</li>
-      <li><b>About 0.5% of notes</b> can still jump to the wrong pitch.</li>
+      <li><b>No comparison with the real York organ.</b> The stop names come from York. The pipe scales and wind pressures are general values. A recording of the real organ that plays the same notes can show the difference.</li>
+      <li><b>No blind listening test.</b> Listeners have not compared our echo with the recorded echo without knowing which is which.</li>
       <li><b>Phones.</b> The app operates on recent iPhones. The full-organ Bach needs much processing power. When the side switch is on silent, Safari plays no sound.</li>
     </ul>
   </section>
@@ -360,7 +358,7 @@
   </section>
 
   <footer>
-    Impulse responses: OpenAIR, University of York (CC BY 4.0). York Minster, and St Paul's Cathedral (Foteinou, Stevens and Murphy, 2022). Stoplist: National Pipe Organ Register. Source code: <a href="https://github.com/b1rdmania/pipe-organ">github.com/b1rdmania/pipe-organ</a>. Made by Andy: <a href="https://x.com/b1rdmania">X</a> · <a href="https://github.com/b1rdmania">GitHub</a>.
+    Made by Andy: <a href="https://x.com/b1rdmania">X</a> · <a href="https://github.com/b1rdmania">GitHub</a> · <a href="https://github.com/b1rdmania/pipe-organ">The source code</a>.
   </footer>
 </main>
 <script type="module" src="how.js"></script>

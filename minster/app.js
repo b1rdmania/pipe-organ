@@ -351,7 +351,7 @@ async function story(heroReady, traced) {
   // I. The pipe. Four shots: the whole pipe; in to the mouth; up to the top
   // for its length; back out to the whole pipe.
   INKED();
-  await card('', 'A pipe organ, rebuilt in software', 'We set out to rebuild one with the physics of the real thing. First we make and tune each pipe. Then we map the echo of the building it plays in.', 4200);
+  await card('', 'A pipe organ, rebuilt in software', 'We set out to rebuild one with the physics of the real thing.', 3000);
   await card('I', 'The pipe', 'Air blows in at the bottom and across a slot called the mouth. That sets the air inside the pipe ringing.');
   await sleep(1600);
   const v = await heroReady;
