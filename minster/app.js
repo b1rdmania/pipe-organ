@@ -597,12 +597,133 @@ async function play(song) {
       return;
     }
     $('#progress').style.width = `${Math.min(100, (100 * e.data.t) / arr.length)}%`;
-    const L = e.data.levels;
-    for (const p of pipes) {
-      const l = L[p.id] || 0;
-      if (p === hero) { heroColour.copy(l > 0.02 ? NEON : INK).multiplyScalar(l > 0.02 ? 0.8 + 2.4 * l : 0.9); continue; }
-      if (Math.abs(l - (p.level || 0)) > 0.04 || (l === 0 && p.level)) { p.level = l; p.state = null; organ.setPipe(p, l > 0.02 ? 'sounding' : 'voiced', l); }
-    }
+    glowLevels(e.data.levels);
   };
 }
+// Light the pipes that are sounding, from the audio thread's levels.
+function glowLevels(L) {
+  for (const p of pipes) {
+    const l = L[p.id] || 0;
+    if (p === hero) { heroColour.copy(l > 0.02 ? NEON : INK).multiplyScalar(l > 0.02 ? 0.8 + 2.4 * l : 0.9); continue; }
+    if (Math.abs(l - (p.level || 0)) > 0.04 || (l === 0 && p.level)) { p.level = l; p.state = null; organ.setPipe(p, l > 0.02 ? 'sounding' : 'voiced', l); }
+  }
+}
+
+// ---- Play it yourself: the organ as an instrument, in the cathedral.
+// On-screen keys (multi-touch), the computer keyboard (A W S E D F T G Y H U
+// J K O L P), or a MIDI keyboard. Choose the stops; the pedal follows the
+// lowest note held.
+const LIVE_STOPS = [
+  { name: 'Diapason 8′', ranks: ['ymDiap8a'], on: true },
+  { name: 'Flute 8′', ranks: ['ymStopped8'], on: false },
+  { name: 'Octave 4′', ranks: ['ymOctave4'], on: true },
+  { name: '2′', ranks: ['ymSuper2'], on: false },
+  { name: 'Mixture', ranks: ['ymMix15', 'ymMix19', 'ymMix22'], on: false },
+  { name: '16′', ranks: ['ymDouble16'], on: false },
+  { name: 'Pedal', ranks: ['ymPedSub16', 'ymPedDiap16'], on: true, pedal: true },
+];
+const live = { on: false, held: new Map(), pedalKey: null, base: 48, sent: 0 };
+const groupOf = (stop, key, pedal) => ORGAN_SOURCES.indexOf(organSource({ key, pedal }, STOPS[stop].feet).id);
+function sendOn(stop, key, pedal = false) {
+  const id = `${stop}:${key}`;
+  if (results.has(id)) audio.node.port.postMessage({ on: [groupOf(stop, key, pedal), id, pedal ? 0.8 : 1] });
+}
+const sendOff = (stop, key, pedal = false) => audio.node.port.postMessage({ off: [groupOf(stop, key, pedal), `${stop}:${key}`] });
+const manualRanks = () => LIVE_STOPS.filter((s) => s.on && !s.pedal).flatMap((s) => s.ranks);
+function pedalFollow() {
+  const low = Math.min(...live.held.keys());
+  let k = Number.isFinite(low) ? low - 12 : null;
+  if (k != null) { while (k > 67) k -= 12; while (k < 36) k += 12; }
+  const ped = LIVE_STOPS.find((s) => s.pedal);
+  if (k === live.pedalKey && ped.on) return;
+  if (live.pedalKey != null) for (const r of ped.ranks) sendOff(r, live.pedalKey, true);
+  live.pedalKey = ped.on ? k : null;
+  if (live.pedalKey != null) for (const r of ped.ranks) sendOn(r, live.pedalKey, true);
+}
+function keyDown(k) {
+  if (!live.on || live.held.has(k) || k < 36 || k > 93) return;
+  const ranks = manualRanks();
+  live.held.set(k, ranks);
+  for (const r of ranks) sendOn(r, k);
+  pedalFollow(); drawKeys();
+}
+function keyUp(k) {
+  const ranks = live.held.get(k); if (!ranks) return;
+  live.held.delete(k);
+  for (const r of ranks) sendOff(r, k);
+  pedalFollow(); drawKeys();
+}
+const BLACK = [1, 3, 6, 8, 10];
+function buildKeys() {
+  const box = $('#keys'); box.innerHTML = '';
+  const octaves = innerWidth < 700 ? 2 : 3;
+  const whites = [];
+  for (let k = live.base; k < live.base + 12 * octaves + 1; k++) if (!BLACK.includes(k % 12)) whites.push(k);
+  for (const k of whites) { const d = document.createElement('div'); d.className = 'w'; d.dataset.k = k; box.append(d); }
+  const w = 100 / whites.length;
+  whites.forEach((k, i) => { if (BLACK.includes((k + 1) % 12) && k + 1 < live.base + 12 * octaves) { const d = document.createElement('div'); d.className = 'b'; d.dataset.k = k + 1; d.style.insetInlineStart = `${(i + 0.68) * w}%`; d.style.inlineSize = `${w * 0.64}%`; box.append(d); } });
+  drawKeys();
+}
+function drawKeys() { for (const d of $('#keys').children) d.classList.toggle('on', live.held.has(+d.dataset.k)); }
+function buildStops() {
+  const box = $('#stops'); box.innerHTML = '';
+  for (const s of LIVE_STOPS) {
+    const b = document.createElement('button'); b.textContent = s.name; b.setAttribute('aria-pressed', s.on);
+    b.onclick = () => { s.on = !s.on; b.setAttribute('aria-pressed', s.on); if (s.pedal) pedalFollow(); };
+    box.append(b);
+  }
+  for (const [label, d] of [['Lower', -12], ['Higher', 12]]) {
+    const b = document.createElement('button'); b.textContent = label;
+    b.onclick = () => { for (const k of [...live.held.keys()]) keyUp(k); live.base = Math.max(36, Math.min(60, live.base + d)); buildKeys(); };
+    box.append(b);
+  }
+}
+// Pointer: each finger plays the key under it, and slides across keys.
+const touches = new Map();
+const keyAt = (x, y) => { const el = document.elementFromPoint(x, y); return el?.dataset?.k ? +el.dataset.k : null; };
+$('#keys').addEventListener('pointerdown', (e) => { e.preventDefault(); $('#keys').setPointerCapture(e.pointerId); const k = keyAt(e.clientX, e.clientY); touches.set(e.pointerId, k); if (k != null) keyDown(k); });
+$('#keys').addEventListener('pointermove', (e) => { if (!touches.has(e.pointerId)) return; const k = keyAt(e.clientX, e.clientY), was = touches.get(e.pointerId); if (k !== was) { if (was != null) keyUp(was); if (k != null) keyDown(k); touches.set(e.pointerId, k); } });
+for (const ev of ['pointerup', 'pointercancel']) $('#keys').addEventListener(ev, (e) => { const k = touches.get(e.pointerId); touches.delete(e.pointerId); if (k != null) keyUp(k); });
+const KEYMAP = 'awsedftgyhujkolp;';
+addEventListener('keydown', (e) => { if (!live.on || e.repeat || e.target.tagName === 'INPUT') return; const i = KEYMAP.indexOf(e.key.toLowerCase()); if (i >= 0) keyDown(live.base + 12 + i); });
+addEventListener('keyup', (e) => { if (!live.on) return; const i = KEYMAP.indexOf(e.key.toLowerCase()); if (i >= 0) keyUp(live.base + 12 + i); });
+// A MIDI keyboard, if one is plugged in and the browser allows it.
+async function midiIn() {
+  if (!navigator.requestMIDIAccess) return;
+  try {
+    const access = await navigator.requestMIDIAccess();
+    const hook = (input) => { input.onmidimessage = ({ data: [st, k, v] }) => { const t = st & 0xf0; if (t === 0x90 && v > 0) keyDown(k); else if (t === 0x80 || (t === 0x90 && v === 0)) keyUp(k); }; };
+    access.inputs.forEach(hook);
+    access.onstatechange = (e) => { if (e.port.type === 'input' && e.port.state === 'connected') hook(e.port); };
+  } catch { /* no MIDI permission: the screen and keyboard still work */ }
+}
+let liveSync = 0;
+function openLive() {
+  if (playing) stop();
+  live.on = true;
+  document.body.classList.add('live');
+  const voiced = Object.fromEntries([...results.values()].map((v) => [v.id, v.params]));
+  live.sent = results.size;
+  audio.node.port.postMessage({ live: { voiced, style: STYLES.york, groups: ORGAN_SOURCES.length } });
+  audio.node.port.onmessage = (e) => { if (e.data.levels) glowLevels(e.data.levels); };
+  // Pipes still being voiced join as they are finished.
+  liveSync = setInterval(() => { if (results.size > live.sent) { const more = Object.fromEntries([...results.values()].slice(live.sent).map((v) => [v.id, v.params])); live.sent = results.size; audio.node.port.postMessage({ more }); } }, 1500);
+  $('#ui').classList.add('gone'); $('#live').classList.remove('gone'); $('#livedone').classList.remove('gone');
+  church = 0.3; reveal(1); if (bloom) bloom.strength = 0.95;
+  buildStops(); buildKeys(); midiIn();
+  cut(PLAY_SHOT(), 2);
+  card('', 'Play it yourself', 'Use the keys, your computer keyboard (A to K), or a MIDI keyboard.').then(() => sleep(4000)).then(cardOff);
+}
+function closeLive() {
+  for (const k of [...live.held.keys()]) keyUp(k);
+  live.on = false; clearInterval(liveSync);
+  document.body.classList.remove('live');
+  if (live.pedalKey != null) { for (const r of LIVE_STOPS.find((s) => s.pedal).ranks) sendOff(r, live.pedalKey, true); live.pedalKey = null; }
+  $('#live').classList.add('gone'); $('#livedone').classList.add('gone');
+  setTimeout(() => audio.node.port.postMessage({ voiced: {}, style: STYLES.york, groups: ORGAN_SOURCES.map(() => []) }), 1500);
+  showList();
+}
+$('#liveopen').onclick = openLive;
+$('#livedone').onclick = closeLive;
+addEventListener('resize', () => { if (live.on) buildKeys(); });
 window.voicerInfo = () => ({ calls: S.renderer.info.render.calls, lines: S.renderer.info.render.lines, voiced: results.size, shot: view.shot(now()) });

@@ -48,6 +48,10 @@ export class Player {
     v.pipe.noteOn();
   }
 
+  // Played live (the chord player): a note sounds until it is released.
+  noteOn(id, gain = 1) { this.start({ id, e: Infinity, gain }); }
+  noteOff(id) { for (const v of this.pool) if (v.busy && v.id === id) v.until = this.t; }
+
   // Fill `out` (mono) with the next block.
   process(out) {
     const st = this.style;
@@ -76,6 +80,7 @@ export class Player {
       out[i] = s;
       this.t++;
     }
+    if (this.live) return false;
     return this.t >= (this.events.at(-1)?.e ?? 0) + this.sr * 0.5 && this.pool.every((v) => !v.busy);
   }
 

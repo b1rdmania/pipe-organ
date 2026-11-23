@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>How we built it · The Voicer</title>
+<style>
+  :root { --ink: #e9e7e1; --body: #b9b7b1; --dim: #6d6b66; --neon: #ff3d6e; --line: #2a2a30; --m: clamp(16px, 4vw, 40px); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background-color: #000000; }
+  body { background: #000; color: var(--body); font: 17px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; overflow-x: hidden; padding: var(--m) max(var(--m), env(safe-area-inset-right)) calc(var(--m) * 2) max(var(--m), env(safe-area-inset-left)); }
+  main { max-inline-size: 44em; margin-inline: auto; }
+  a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--neon); }
+  a:active { color: var(--neon); }
+  :focus-visible { outline: 1px solid var(--neon); outline-offset: 3px; }
+  .back { display: inline-flex; align-items: center; min-block-size: 44px; color: var(--dim); text-decoration: none; }
+  h1 { color: var(--ink); font-weight: 300; font-size: clamp(36px, 7vw, 60px); line-height: 1; letter-spacing: -0.03em; margin-block: 24px 16px; }
+  .lede { font-size: clamp(18px, 2.2vw, 21px); color: var(--ink); }
+  nav ol { list-style: none; margin-block: 32px 8px; border-top: 1px solid var(--line); columns: 2 14em; column-gap: 32px; }
+  nav li { border-bottom: 1px solid var(--line); break-inside: avoid; }
+  nav a { display: flex; align-items: center; gap: 12px; min-block-size: 44px; text-decoration: none; color: var(--body); }
+  nav a span, h2 span { font: 12px/1 ui-monospace, "SF Mono", Menlo, monospace; color: var(--neon); }
+  section { margin-block-start: 72px; }
+  h2 { color: var(--ink); font-weight: 300; font-size: clamp(26px, 4vw, 36px); line-height: 1.1; letter-spacing: -0.02em; display: flex; gap: 14px; align-items: baseline; }
+  h3 { color: var(--ink); font-weight: 500; font-size: 17px; margin-block: 28px 6px; }
+  p, ul { margin-block-start: 14px; }
+  ul { padding-inline-start: 1.2em; }
+  li { margin-block-start: 6px; }
+  b { color: var(--ink); font-weight: 500; }
+  code, .eq { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 15px; color: var(--ink); }
+  .eq { display: block; margin-block-start: 14px; padding: 12px 16px; border-inline-start: 1px solid var(--neon); overflow-x: auto; white-space: pre; }
+  figure { margin-block: 28px; margin-inline: calc(var(--m) * -0.5); }
+  figure .stage { position: relative; aspect-ratio: 16 / 10; border: 1px solid var(--line); touch-action: pan-y; }
+  figure .stage.tall { aspect-ratio: 4 / 5; }
+  figure canvas { display: block; inline-size: 100%; block-size: 100%; }
+  figcaption { margin-block-start: 10px; padding-inline: calc(var(--m) * 0.5); font-size: 14px; color: var(--dim); }
+  .tag { position: absolute; transform: translate(-50%, -50%); font: 12px/1 ui-monospace, "SF Mono", Menlo, monospace; color: var(--ink); background: rgba(0, 0, 0, 0.7); padding: 3px 6px; pointer-events: none; white-space: nowrap; }
+  .tag::before { content: ""; display: inline-block; inline-size: 6px; block-size: 6px; margin-inline-end: 6px; background: var(--neon); vertical-align: 1px; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18em), 1fr)); gap: 16px; padding-inline: calc(var(--m) * 0.5); }
+  .chart { position: relative; }
+  .chart h4 { color: var(--ink); font-weight: 400; font-size: 14px; margin-block-end: 4px; }
+  .chart svg { display: block; inline-size: 100%; block-size: auto; overflow: visible; }
+  .tip { position: absolute; pointer-events: none; background: #0d0d10; border: 1px solid var(--line); color: var(--ink); font: 12px/1.4 ui-monospace, "SF Mono", Menlo, monospace; padding: 6px 8px; white-space: nowrap; opacity: 0; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--body); padding-inline: calc(var(--m) * 0.5); margin-block-end: 8px; }
+  .legend i { display: inline-block; inline-size: 22px; block-size: 0; border-block-start: 2px solid; margin-inline-end: 8px; vertical-align: middle; }
+  .steps { display: flex; flex-wrap: wrap; gap: 6px; padding-inline: calc(var(--m) * 0.5); margin-block-start: 12px; }
+  .steps button { all: unset; cursor: pointer; min-block-size: 44px; padding-inline: 12px; display: inline-flex; align-items: center; border: 1px solid #3e3d3a; color: var(--body); font-size: 14px; }
+  .steps button:active, .steps button.on { border-color: var(--neon); color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .steps button:hover { border-color: var(--neon); } nav a:hover { color: var(--ink); } }
+  table { inline-size: 100%; border-collapse: collapse; margin-block-start: 16px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: end; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: start; }
+  th { color: var(--dim); font-weight: 400; }
+  td { color: var(--ink); }
+  .wide { overflow-x: auto; }
+  footer { margin-block-start: 80px; font-size: 14px; color: var(--dim); border-top: 1px solid var(--line); padding-block-start: 16px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<main>
+  <a class="back" href="app.html">← The Voicer</a>
+  <h1>How we built it</h1>
+  <p class="lede">A pipe organ rebuilt in software, from the physics up. No recordings of pipes are used anywhere. Every sound you hear is worked out live from how air moves through a pipe and how sound moves through a cathedral.</p>
+
+  <nav aria-label="Contents"><ol>
+    <li><a href="#pipe"><span>01</span>The pipe</a></li>
+    <li><a href="#voicing"><span>02</span>Voicing</a></li>
+    <li><a href="#organ"><span>03</span>The organ</a></li>
+    <li><a href="#building"><span>04</span>The cathedral</a></li>
+    <li><a href="#echo"><span>05</span>The echo</a></li>
+    <li><a href="#check"><span>06</span>How we check it</a></li>
+    <li><a href="#space"><span>07</span>Sound in space</a></li>
+    <li><a href="#songs"><span>08</span>Songs into organ music</a></li>
+    <li><a href="#limits"><span>09</span>What isn't done yet</a></li>
+  </ol></nav>
+
+  <section id="pipe">
+    <h2><span>01</span>The pipe</h2>
+    <p>Most organ pipes are <b>flue pipes</b>. They have no reed and no moving parts. Air from the wind chest enters through a small hole in the tip of the foot (the <b>toe</b>), rises through the foot, and is squeezed through a narrow slit (the <b>flue</b>) between the front of the foot and a flat plate called the <b>languid</b>. That makes a thin sheet of air, the <b>jet</b>, which shoots up across the <b>mouth</b> and hits the sharp <b>upper lip</b>.</p>
+    <figure>
+      <div class="stage tall" id="fig-pipe"></div>
+      <figcaption>Figure 1. One of our pipes, Open Diapason C3, drawn from its real speaking length. Drag to turn it.</figcaption>
+    </figure>
+    <p>A jet hitting an edge is unstable: it flips between going inside and outside the lip. On its own that would make only a faint hiss. Above the mouth, though, sits the <b>body</b>: a column of air with its own natural frequencies. Each flip of the jet pushes air into the column; the column's pressure wave travels up, reflects at the top, comes back and bends the jet the other way. The jet and the column lock together. That loop is what makes a pipe speak.</p>
+    <h3>The note</h3>
+    <p>An open pipe sounds when its column holds half a wavelength; a stopped pipe (capped at the top) holds a quarter, so it sounds an octave lower for the same length:</p>
+    <span class="eq">f ≈ c / 2L   (open)        f ≈ c / 4L   (stopped)        c ≈ 343 m/s</span>
+    <p>So middle C (262 Hz) needs an open pipe about 65 cm long, and the lowest note of the York Minster 32′ pedal stop (16 Hz) a pipe of about 10.5 m. The organ's "feet" (8′, 4′, 16′, 32′) are the length of its lowest open pipe in feet.</p>
+    <h3>Our model</h3>
+    <p>We use a <b>jet-drive digital waveguide</b>, a standard way to model wind instruments. It has four parts, each one a few lines of code, run 48,000 times a second for every pipe that sounds:</p>
+    <figure>
+      <svg viewBox="0 0 640 220" role="img" aria-label="The pipe model as a loop: wind makes a jet, the jet travels across the mouth (a delay), meets the lip (a soft limit), drives the air column (a delay the length of the pipe), whose reflection comes back to bend the jet." style="inline-size:100%;block-size:auto">
+        <g fill="none" stroke="#5d5b57" stroke-width="1.5">
+          <rect x="20" y="80" width="110" height="56"/><rect x="190" y="80" width="110" height="56"/><rect x="360" y="80" width="110" height="56"/><rect x="510" y="80" width="110" height="56"/>
+          <path d="M130 108h60M300 108h60M470 108h40"/><path d="M565 136v52H245v-52"/><path d="M75 30v50"/>
+        </g>
+        <g fill="#ff3d6e"><path d="M190 108l-8-4v8zM360 108l-8-4v8zM510 108l-8-4v8zM245 136l-4 8h8zM75 80l-4-8h8z"/></g>
+        <g fill="#e9e7e1" font-family="ui-monospace, Menlo, monospace" font-size="13" text-anchor="middle">
+          <text x="75" y="105">wind</text><text x="75" y="122">+ noise</text>
+          <text x="245" y="105">jet delay</text><text x="245" y="122">cut-up / speed</text>
+          <text x="415" y="105">lip</text><text x="415" y="122">soft limit</text>
+          <text x="565" y="105">air column</text><text x="565" y="122">delay = period</text>
+          <text x="405" y="206">reflection bends the jet</text><text x="75" y="22">toe sets pressure</text>
+        </g>
+      </svg>
+      <figcaption>Figure 2. The loop inside every pipe. The air column's returning wave feeds back to the jet; when the loop's total delay matches one of the column's modes, the pipe speaks that note.</figcaption>
+    </figure>
+    <ul>
+      <li><b>The jet</b> is a delay line. Its length is the time the jet takes to cross the mouth: the height of the mouth (the <b>cut-up</b>) divided by the jet's speed. The speed comes from the pressure at the foot, <code>U = √(2p / ρ)</code>, so closing the toe slows the jet and lengthens the delay.</li>
+      <li><b>The lip</b> is a soft limit, a cubic curve that saturates: the jet can only put so much air into the pipe. An offset in the curve (the jet aimed slightly off the lip) adds the even harmonics that give a principal its edge.</li>
+      <li><b>The air column</b> is a second delay line, one period long, with a reflection at the top: positive for an open pipe, negative for a stopped one, which removes the even harmonics and gives a stopped flute its hollow sound.</li>
+      <li><b>Losses</b> are a gentle low-pass filter in the loop. Its corner sits a fixed number of harmonics above the note, so a rank keeps one tone colour from bass to treble, which is what organ builders call <b>scaling</b>. Radiation from the mouth tilts the sound brighter.</li>
+    </ul>
+    <p>Two extras make it sound like a real pipe starting rather than a switch: a burst of edge noise at the start (<b>chiff</b>), and a brief pressure surge as the valve under the pipe opens. Turbulence in the jet adds a little noise all the time, and the wind supply wobbles slightly and sags when many pipes play, as a real bellows does.</p>
+    <p>The key fact for what follows: whether the pipe speaks its proper note depends on the jet's travel time compared with the note's period. Around half a period, it speaks its fundamental. Too fast or too slow and it jumps to a higher mode, a note an octave or more above. That is what a voicer has to get right.</p>
+  </section>
+
+  <section id="voicing">
+    <h2><span>02</span>Voicing</h2>
+    <p>A new pipe from the workshop is not ready. Real pipes are made deliberately "rough": cut a little long, the mouth cut low, the toe left open, no nicks. A <b>voicer</b> then works on each pipe by ear, one at a time. We built a program that does the same job, measuring instead of listening.</p>
+    <h3>The four adjustments, in a voicer's order</h3>
+    <ul>
+      <li><b>Toe.</b> Open or close the hole in the foot. This sets the pressure at the mouth, so the loudness, and it also changes the jet's speed.</li>
+      <li><b>Cut-up.</b> Raise the top of the mouth. A higher cut-up makes the jet's journey longer, rounds the tone, and stops the pipe leaping to a higher note. It can only go up: metal cut away cannot be put back.</li>
+      <li><b>Nicks.</b> Small cuts in the edge of the languid break up the jet's edge noise, so the note starts cleanly. Also one-way.</li>
+      <li><b>Length.</b> Trim or lengthen the top (in real organs, a tuning slide) until the pipe is in tune.</li>
+    </ul>
+    <h3>What it measures each time</h3>
+    <ul>
+      <li><b>Pitch</b> by autocorrelation: how well the sound matches itself shifted by one period. It is accurate to a fraction of a cent (a cent is a hundredth of a semitone).</li>
+      <li><b>Level</b> as the RMS of the steady tone, against the target for the rank.</li>
+      <li><b>Tone</b> as the spectral centroid, the "centre of mass" of the harmonics, counted in harmonics so it means the same at every pitch.</li>
+      <li><b>Onset</b>: how long the note takes to settle, and how much edge noise comes before it.</li>
+    </ul>
+    <p>When a pipe jumps to the wrong note, the voicer works out which way to go from the jet's travel time: too long and it gives the pipe more wind; too short and it raises the mouth. Finally it plays the pipe under eight different gusts of turbulence and wind levels, and only passes it if it holds its note every time.</p>
+    <figure>
+      <div class="legend" aria-hidden="true"><span>Measured after each step of voicing one pipe, live in your browser</span></div>
+      <div class="charts" id="fig-voicing"></div>
+      <div class="steps" id="fig-voicing-play" aria-label="Hear each step"></div>
+      <figcaption>Figure 3. Open Diapason D♯4, voiced here as this page loaded. Pitch error is clipped at ±150 cents; the first tries are an octave or more out. Press a step to hear it.</figcaption>
+    </figure>
+    <p>Across all 830 pipes: every pipe ends within about a cent of perfect tuning, and level lands within about 1.2 dB of its target for 90% of pipes. In a stress test with turbulence the voicer never heard, about 0.5% of notes still jumped. That is the honest number, and why a stray wrong note is still possible.</p>
+  </section>
+
+  <section id="organ">
+    <h2><span>03</span>The organ</h2>
+    <p>One pipe makes one note in one tone colour. A row of pipes, one for each key, is a <b>rank</b> or <b>stop</b>. Our organ has seventeen ranks, named from the York Minster stoplist in the National Pipe Organ Register: eleven played from the keyboards (manuals) and six from the pedals. That is 830 pipes: 58 per manual rank (C2 to A6) and 32 per pedal rank.</p>
+    <figure>
+      <div class="stage" id="fig-organ"></div>
+      <figcaption>Figure 4. All 830 pipes at their real speaking lengths, standing on a windchest: the front rank, the other manual ranks in rows behind, the pedal towers either side. Drag to turn it.</figcaption>
+    </figure>
+    <ul>
+      <li><b>Principals and diapasons</b> (8′, 4′, 2′): open metal pipes, the organ's main sound. An 8′ rank sounds at written pitch, a 4′ an octave higher, a 2′ two octaves.</li>
+      <li><b>Stopped and wooden ranks</b>: darker, hollow tones, set by the stopped reflection and a lower loss corner.</li>
+      <li><b>Mixtures</b>: ranks that sound a fifth or an octave above the note, very small pipes. Real mixtures "break back" an octave near the top of the keyboard because the pipes would be too tiny to make; ours do the same.</li>
+      <li><b>Pedal ranks</b> down to 32′: the lowest pipe sounds 16 Hz, felt more than heard, and is slow to start, about 0.7 seconds to reach full voice.</li>
+    </ul>
+    <p>Every pipe is voiced by the same loop when the app starts, in background threads (Web Workers), while you watch.</p>
+  </section>
+
+  <section id="building">
+    <h2><span>04</span>The cathedral</h2>
+    <p>To hear the organ in York Minster we need the building's shape and what its surfaces are made of. We drew it as a plan of 0.5 m cells, about 42,000 of them. Each cell is open air from a floor height to a ceiling height, or it is solid (a pier, a wall, outside). Each surface has a material with an absorption figure for six octave bands, from 125 Hz to 4 kHz: limestone absorbs about 2–5%, glass more at low pitch, the boarded vaults and oak stalls more again.</p>
+    <figure>
+      <div class="stage" id="fig-plan"></div>
+      <figcaption>Figure 5. York Minster as the acoustic model sees it, from above. Brighter is higher: the nave vault at 29.5 m, the central tower at about 55 m, the aisles at 14 m. The pink marks are the measured recording's source and listener (section 6).</figcaption>
+    </figure>
+    <p>Dimensions come from published sources: 160 m long outside, the nave 31 m wide and about 29.5 m high, the transepts, the choir at 31 m. Where nothing is published (the height of the vault inside the tower, the size of the piers) we estimated, and the code marks every estimate. The model's volume and shape do the main work; detail smaller than half a metre is left out.</p>
+  </section>
+
+  <section id="echo">
+    <h2><span>05</span>The echo</h2>
+    <p>A cathedral's echo is millions of reflections arriving over many seconds. We work it out by <b>ray tracing</b>: firing about 30,000 rays of sound from each part of the organ in every direction and following each through the building.</p>
+    <ul>
+      <li>At every surface a ray loses the share of energy that material absorbs, separately in each of the six bands.</li>
+      <li>It reflects either like a mirror or scattered in a random direction (35% scattered), because carved stone and pews spread sound.</li>
+      <li>Air itself absorbs high frequencies over long distances (the ISO 9613 figures), which is why the top of a cathedral's echo dies first.</li>
+      <li>Whenever a ray passes through a 1.5 m sphere around the listener, its energy and arrival time are recorded.</li>
+    </ul>
+    <p>The result is an energy histogram for each band: how much sound arrives at each millisecond. From it we measure the echo the way acousticians do. Integrating the energy backwards (the Schroeder integral) gives a decay curve; <b>T30</b> is how long the sound takes to fall by 60 dB, worked out from its slope between −5 and −35 dB.</p>
+    <span class="eq">T30 at 500 Hz, York Minster:   measured 8.37 s   model 8.37 s</span>
+    <p>To make it something you can hear, we turn the histogram into a two-ear impulse response: noise shaped in each band to the traced energy, the direct sound arriving first, and each ear getting its own version, with the far ear delayed and shadowed by the head. The organ's sound is then convolved with it live in the browser. In the app, the bright lines are real ray paths from this trace, drawn at the speed of sound slowed twelve times.</p>
+  </section>
+
+  <section id="check">
+    <h2><span>06</span>How we check it</h2>
+    <p>The University of York's acoustics lab publishes recordings of real buildings' echoes in its <b>OpenAIR</b> library. They play a test sound at one spot and record it at another. For some buildings they record several spots: <b>St Paul's Cathedral has eight</b> (under the dome to the nave, the nave to the dome, both under the dome, the choir, the Geometric Staircase, two in the Whispering Gallery, and the library). York Minster has one pair, from under the central tower to the middle of the nave.</p>
+    <p>We place our source and listener at the same two spots and compare.</p>
+    <figure>
+      <div class="legend"><span><i style="border-color:#e9e7e1;border-block-start-style:dashed"></i>Measured in the building</span><span><i style="border-color:#ff3d6e"></i>Our model</span></div>
+      <div class="charts" id="fig-t30"></div>
+      <figcaption>Figure 6. Echo time (T30) in six octave bands. "Before tuning" is the model straight from the plan and the material tables: a genuine prediction. "After tuning" adds one correction factor per band, fitted to the same recording.</figcaption>
+    </figure>
+    <div class="wide"><table id="t30-table" aria-label="Echo times in seconds"></table></div>
+    <ul>
+      <li><b>Before tuning</b> the model was within 5–10% in York's middle bands and within 2–13% in every band at St Paul's. The low bands at York came out short: the real building has more low-frequency echo than the material tables suggest.</li>
+      <li><b>After tuning</b> it matches within about 1%, but that is a fit to one recording, not an independent test.</li>
+      <li><b>The independent test</b> is the other positions. We tuned St Paul's to the dome-to-nave pair only; the other seven recordings let us check whether the model captures the building or just one measurement. That check has not been run yet.</li>
+      <li>What you actually hear is within about 5% up to 2 kHz. It runs about 20% long at 4 kHz, and the early sound in the lowest bands is 5–7 dB weaker than the real building, which can sound muddy; we filter some low end out of the echo to compensate.</li>
+    </ul>
+    <p>For the organ itself, the check is internal: every pipe's pitch, level, tone and steadiness are measured, as in section 2. What is not verified is whether the result sounds like York's actual organ. That needs a blind listening test and a recording of the real instrument playing the same notes.</p>
+  </section>
+
+  <section id="space">
+    <h2><span>07</span>Sound in space</h2>
+    <p>The organ is not one point. It is split into six sources: the main manual pipes, the small upper work and the pedal, each in two halves (C side and C♯ side, as real organs alternate notes left and right). Each source sits where its pipes are drawn.</p>
+    <ul>
+      <li>The <b>direct sound</b> from each source goes through the browser's head-related transfer function (HRTF): filters measured on human heads that place a sound left, right, above or behind.</li>
+      <li>The <b>echo</b> comes from the traced two-ear response for that part of the organ.</li>
+      <li>The <b>listener is the camera</b>. As it moves and turns, the direct sound moves around your head, and its level falls with distance exactly as the traced echo assumes (amplitude in proportion to 1 / distance), so the two stay in the right balance.</li>
+    </ul>
+  </section>
+
+  <section id="songs">
+    <h2><span>08</span>Songs into organ music</h2>
+    <p>A pop song's MIDI file is written for a band: drums, bass, guitars, pads, a vocal line. An organist arranging it would not play every track on every stop. Our arranger does what they would:</p>
+    <ul>
+      <li><b>Roles.</b> Each track becomes the tune, the harmony or the bass. Drums are dropped as sound but used to find the song's sections.</li>
+      <li><b>Divisions.</b> The tune goes on the <b>Great</b>, the harmony on the <b>Swell</b>, whose pipes stand in a box with shutters, so it sits underneath and can swell and fade with the song's own volume changes. The bass goes to the <b>pedals</b>, moved as a whole line, with the 16′ and 32′ stops coming in for the choruses.</li>
+      <li><b>The section.</b> Instead of the first 40 seconds (often a slow intro), it finds the chorus by looking for the most-repeated block of music.</li>
+      <li><b>The echo.</b> Notes that repeat very fast smear in an eight-second echo, so they are thinned, and the whole song plays at 82% speed, as an organist in a cathedral would slow down.</li>
+    </ul>
+    <p>We check each arrangement with numbers before anyone listens: how much of the original's notes it keeps (72–78% for the pop songs, up from 18–61%), whether every pitch class and the bass line survive, and how loud each part is in a dry render. Bach's organ works are detected as organ music and play exactly as written.</p>
+  </section>
+
+  <section id="limits">
+    <h2><span>09</span>What isn't done yet</h2>
+    <ul>
+      <li><b>No reed stops.</b> Trumpets and tubas work differently (a vibrating brass tongue), and they would carry a pop tune best.</li>
+      <li><b>Not compared with the real York organ.</b> The stop names are York's, but pipe scales and wind pressures are generic.</li>
+      <li><b>No blind listening test</b> of our echo against the recorded one.</li>
+      <li><b>The held-back positions</b> at St Paul's are still to be checked.</li>
+      <li><b>About 0.5% of notes</b> can still jump to the wrong pitch.</li>
+      <li><b>Phones:</b> it runs on recent iPhones; the full-organ Bach is heavy, and with the side switch on silent, Safari plays no sound.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Impulse responses: OpenAIR, University of York (CC BY 4.0), York Minster; St Paul's Cathedral (Foteinou, Stevens and Murphy, 2022). Stoplist: National Pipe Organ Register. Source code: <a href="https://github.com/b1rdmania/pipe-organ">github.com/b1rdmania/pipe-organ</a>.
+  </footer>
+</main>
+<script type="module" src="how.js"></script>
+</body>
+</html>

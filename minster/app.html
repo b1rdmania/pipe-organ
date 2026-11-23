@@ -61,6 +61,23 @@
   #find input { all: unset; display: block; inline-size: 100%; min-block-size: 44px; font-size: 16px; border-block-end: 1px solid var(--line); color: var(--ink); }
   #find input::placeholder { color: var(--dim); }
   #results:empty { display: none; }
+  #more { border-top: 0; margin-block-start: 8px; }
+  #more a { display: flex; align-items: center; min-block-size: 44px; color: #a9a7a1; text-decoration: none; }
+  @media (hover: hover) and (pointer: fine) { #more a:hover { color: var(--ink); } }
+  #more a:active { color: var(--neon); }
+
+  #live { position: fixed; inset-inline: 0; inset-block-end: 0; padding: 0 var(--r) var(--b) var(--l); display: flex; flex-direction: column; gap: 10px; }
+  #stops { display: flex; flex-wrap: wrap; gap: 6px; }
+  #stops button { all: unset; cursor: pointer; min-block-size: 44px; padding-inline: 12px; display: inline-flex; align-items: center; border: 1px solid #3e3d3a; color: #a9a7a1; font-size: 14px; background: rgba(0, 0, 0, 0.7); }
+  #stops button[aria-pressed="true"] { border-color: var(--neon); color: var(--ink); }
+  #stops button:active { color: var(--neon); }
+  #keys { position: relative; display: flex; block-size: clamp(110px, 22vh, 170px); touch-action: none; user-select: none; -webkit-user-select: none; }
+  #keys .w { flex: 1; border: 1px solid #5d5b57; border-inline-start-width: 0; background: rgba(12, 12, 14, 0.92); }
+  #keys .w:first-child { border-inline-start-width: 1px; }
+  #keys .b { position: absolute; inset-block-start: 0; block-size: 60%; background: #1b1b1f; border: 1px solid #5d5b57; }
+  #keys .on { background: var(--neon); }
+  /* While playing, the cards sit above the keyboard. */
+  body.live #card { inset-block-end: calc(clamp(110px, 22vh, 170px) + 76px + var(--b)); }
   :where(button, input):focus-visible { outline: 1px solid var(--neon); outline-offset: 3px; }
   #progress { inset-block-end: 0; }
   @media (max-width: 720px) { #steps { left: auto; inset-inline-end: var(--r); top: 38%; } #steps p { max-inline-size: 13em; } }
@@ -89,7 +106,13 @@
   <ol id="songs"></ol>
   <form id="find"><input id="q" type="search" placeholder="Search a song" autocomplete="off" aria-label="Search a song"></form>
   <ol id="results"></ol>
+  <ol id="more"><li><button id="liveopen">Play it yourself</button></li><li><a href="how.html">How we built this</a></li></ol>
 </section>
+<section id="live" class="fade gone" aria-label="Play the organ">
+  <div id="stops"></div>
+  <div id="keys"></div>
+</section>
+<button id="livedone" class="ctl fade gone">Done</button>
 <script type="module" src="app.js"></script>
 </body>
 </html>

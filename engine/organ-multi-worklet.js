@@ -8,6 +8,17 @@ class OrganMulti extends AudioWorkletProcessor {
     this.players = null;
     this.frame = 0;
     this.port.onmessage = (e) => {
+      // Played live: { live: { voiced, style, groups } } sets up one player per
+      // part of the case; then { on: [group, id, gain] } and { off: [group, id] }.
+      if (e.data.on) { this.players?.[e.data.on[0]]?.noteOn(e.data.on[1], e.data.on[2]); return; }
+      if (e.data.off) { this.players?.[e.data.off[0]]?.noteOff(e.data.off[1]); return; }
+      if (e.data.more) { for (const p of this.players || []) Object.assign(p.voiced, e.data.more); return; }
+      if (e.data.live) {
+        const { voiced, style, groups } = e.data.live;
+        this.players = Array.from({ length: groups }, () => { const p = new Player(sampleRate, { voiced, style, polyphony: 64 }); p.load([]); p.live = true; return p; });
+        this.done = this.players.map(() => false);
+        return;
+      }
       // groups: [[events], ...] in output order. box: the Swell shutters,
       // [[seconds, gain]], on the same clock as the events (optional).
       const { voiced, style, groups, box } = e.data;
