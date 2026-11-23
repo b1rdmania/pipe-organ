@@ -12,6 +12,19 @@ python3 -m http.server 5320 --bind 127.0.0.1
 
 Open http://127.0.0.1:5320.
 
+## Plug-in
+
+VST3, AU and a standalone app for macOS 11 or later (Apple silicon and Intel). Download from [Releases](https://github.com/b1rdmania/pipe-organ/releases). The build is not notarised: read `INSTALL.txt` in the zip.
+
+Build from source:
+
+```sh
+cd vst
+git clone --depth 1 --branch 9.0.6 https://github.com/juce-framework/JUCE.git
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+cmake --build build --target TheVoicer_VST3 TheVoicer_AU TheVoicer_Standalone
+```
+
 ## What it does
 
 1. **The pipe.** A flue pipe as a jet-drive waveguide. It arrives as a pipe maker leaves it (cut long, mouth low, toe open) and the voicer sets its toe (level), cut-up (tone), nicks (onset noise) and length (pitch), measuring each step, then checks it holds its note under unsteady wind.
