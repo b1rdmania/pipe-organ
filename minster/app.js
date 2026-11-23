@@ -35,7 +35,8 @@ const SONGS = [
 ];
 // The rooms. Each has its building, its acoustic model, how its organ stands,
 // and the shots that show it.
-const ROOM_ID = new URLSearchParams(location.search).get('room') === 'stpauls' ? 'stpauls' : 'york';
+// St Paul's is built (?room=stpauls) but held back from the demo for now.
+const ROOM_ID = 'york';
 const ROOM_UI = {
   york: {
     name: 'York Cathedral', model: ROOMS.york,
