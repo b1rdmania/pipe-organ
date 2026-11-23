@@ -23,7 +23,7 @@ import { highlights } from '../engine/voicer.js';
 import { ROOMS } from '../engine/rooms.js';
 import { layoutOrgan, organLines, pipeSegments, NEON, INK } from './organ-view.js';
 import { SR, buildAudio, renderNotes } from './sound.js';
-import { songList } from './songs.js';
+import { SONGS, songList } from './songs.js';
 
 // The rooms. Each has its building, its acoustic model, how its organ stands,
 // and the shots that show it.
@@ -131,9 +131,7 @@ let church = 0.55;
 // Ranks: the voicing order (the ranks most songs use first), and where each
 // floats while it waits: further out toward the viewer, rank by rank.
 const RANKS = [...STYLES.york.manual, ...STYLES.york.pedal];
-// The hero's rank first (it is shown next), then the big pedal ranks, which are
-// slow to voice and used by every song, then the rest of what songs use.
-const CORE = ['ymDiap8a', 'ymPedWood32', 'ymPedWood16', 'ymStopped8', 'ymOctave4', 'ymDiap8b', 'ymDouble16', 'ymPedSub16', 'ymPedDiap16', 'ymPedPrin8', 'ymPrincipal4', 'ymSuper2'];
+const CORE = ['ymDiap8a', 'ymStopped8', 'ymOctave4', 'ymDiap8b', 'ymDouble16', 'ymPedSub16', 'ymPedDiap16', 'ymPedPrin8', 'ymPrincipal4', 'ymSuper2', 'ymPedWood16', 'ymPedWood32'];
 const ORDER = [...CORE, ...RANKS.filter((r) => !CORE.includes(r))];
 const rank = Object.fromEntries(ORDER.map((r, i) => [r, { i, pipes: pipes.filter((p) => p.stop === r && p !== hero), done: 0, apart: 1 }]));
 // Each waiting rank stands out in front of its own case (toward whoever
@@ -255,17 +253,31 @@ const insideRoom = (q) => {
   return ROOM.h[k] > 0 && q[2] >= ROOM.f[k] - 0.5 && q[2] <= ROOM.h[k] + 0.5;
 };
 
+// The pipes the built-in songs use, worked out while the page loads, so they
+// can be voiced first and the songs are ready when the list appears.
+const arrange = (midi, song) => orchestrate(midi, { from: song.from, to: song.to, solo: song.solo, keep: song.keep, speed: 0.82, offset: 0.4 });
+const songPipes = Promise.all(SONGS.map(async (song) => {
+  try { return arrange(parseMidi(await (await fetch(song.file)).arrayBuffer()), song).pipes.map((p) => `${p.stop}:${p.key}`); } catch { return []; }
+})).then((lists) => new Set(lists.flat()));
+const size = (p) => STOPS[p.stop].feet * 2 ** (-p.key / 12);
+
 // ---- Work in the background: voicing and tracing.
 const results = new Map();
 const hc = navigator.hardwareConcurrency || 4;
 let onVoiced = () => {};
-function startVoicing() {
+async function startVoicing() {
   const heroDone = new Promise((ok) => {
     const w = new Worker('../engine/voicer-worker.js', { type: 'module' });
     w.onmessage = (e) => { if (e.data.done) { w.terminate(); return; } results.set(e.data.id, e.data); ok(e.data); };
     w.postMessage({ sr: SR, pipes: [{ stop: hero.stop, key: hero.key }], audible: [HERO] });
   });
-  const queue = ORDER.flatMap((r) => rank[r].pipes.map((p) => ({ stop: p.stop, key: p.key })));
+  // The first row (shown next), then every pipe the songs use, biggest first,
+  // then the rest of the organ.
+  const wanted = await songPipes;
+  const first = rank[hero.stop].pipes;
+  const songs = pipes.filter((p) => p !== hero && p.stop !== hero.stop && wanted.has(p.id)).sort((a, b) => size(b) - size(a));
+  const taken = new Set([...first, ...songs]);
+  const queue = [...first, ...songs, ...ORDER.flatMap((r) => rank[r].pipes.filter((p) => !taken.has(p)))].map((p) => ({ stop: p.stop, key: p.key }));
   const n = Math.max(2, Math.min(6, hc - 3));
   for (let i = 0; i < n; i++) {
     const w = new Worker('../engine/voicer-worker.js', { type: 'module' });
@@ -534,34 +546,36 @@ function showList() {
   playing = null; stopped = false; $('#stopbtn').classList.add('gone'); church = 0.55; reveal(1); if (bloom) bloom.strength = 0.55;
   $('#ui').classList.remove('gone'); cut(PLAY_SHOT(), 5);
 }
-// While a song plays, a click or Esc stops it and brings the list back.
+// While a song plays, Stop or Esc ends it and brings the list back.
 function stop() {
   if (!playing) return;
   stopped = true; cardOff();
   audio.node.port.postMessage({ voiced: {}, style: STYLES.york, groups: ORGAN_SOURCES.map(() => []) });
 }
-canvas.addEventListener('click', stop);
 $('#stopbtn').onclick = stop;
 addEventListener('keydown', (e) => { if (e.key === 'Escape') stop(); });
 
+let picked = 0;
 async function play(song) {
+  const mine = ++picked; // a newer pick wins
   stopped = false;
   const midi = parseMidi(song.data ?? await (await fetch(song.file)).arrayBuffer());
-  const arr = orchestrate(midi, { from: song.from, to: song.to, solo: song.solo, keep: song.keep, speed: 0.82, offset: 0.4 });
+  const arr = arrange(midi, song);
   if (!arr.events.length) { await card('', 'No notes there', 'That MIDI file has nothing to play in its first minute.', 3000); await cardOff(); return; }
   const missing = () => arr.pipes.filter((p) => !results.has(`${p.stop}:${p.key}`));
   if (missing().length) {
     // Voice exactly the pipes this song still needs, now, alongside the rest.
     // Biggest first: they take longest.
-    const need = missing().sort((a, b) => STOPS[b.stop].feet * 2 ** (-b.key / 12) - STOPS[a.stop].feet * 2 ** (-a.key / 12)), n = Math.max(2, Math.min(4, hc - 2));
+    const need = missing().sort((a, b) => size(b) - size(a)), n = Math.max(2, Math.min(4, hc - 2));
     for (let i = 0; i < n; i++) {
       const w = new Worker('../engine/voicer-worker.js', { type: 'module' });
       w.onmessage = (e) => { if (e.data.done) { w.terminate(); return; } if (!results.has(e.data.id)) { results.set(e.data.id, e.data); onVoiced(e.data.id); } };
       w.postMessage({ sr: SR, pipes: need.filter((_, k) => k % n === i).map((p) => ({ stop: p.stop, key: p.key })), audible: [] });
     }
     await card('', 'Making its pipes', `${need.length} to go.`);
-    while (missing().length) { $('#card p').textContent = `${missing().length} to go.`; await sleep(300); }
+    while (missing().length && mine === picked) { $('#card p').textContent = `${missing().length} to go.`; await sleep(300); }
   }
+  if (mine !== picked) return;
   const voiced = Object.fromEntries([...results.values()].map((v) => [v.id, v.params]));
   const groups = ORGAN_SOURCES.map((id) => arr.events.filter((e) => organSource(e, STOPS[e.stop].feet).id === id));
   audio.node.port.postMessage({ voiced, style: STYLES.york, groups, box: arr.box });
