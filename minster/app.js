@@ -43,7 +43,7 @@ const ROOM_UI = {
     line: '160 metres of stone, glass and timber.',
     echoAt: [62, 0, 1.7], // the east end of the nave
     wide: { p: [-48, -150, 92], a: [76, 0, 6] },
-    inside: (mid) => ({ p: [30, -7, 17], a: [mid[0], 0, mid[2] + 2] }),
+    inside: () => ({ p: [50, -9, 9], a: [82, 0, 24] }), // the east end of the nave, looking up into the crossing
     revealCentre: 0.6,
   },
   stpauls: {
@@ -195,6 +195,11 @@ const caseLines = (() => {
 })();
 
 
+// The echo's sound paths, drawn as thick lines.
+const rayMat = new LineMaterial({ vertexColors: true, linewidth: 2, transparent: true, toneMapped: false, fog: false });
+rayMat.resolution.set(innerWidth, innerHeight);
+addEventListener('resize', () => rayMat.resolution.set(innerWidth, innerHeight));
+
 // ---- The frame loop: a camera shot is a function of time.
 const view = { shot: () => orbit(HC, 6, 0.9), rays: [], moving: new Set() };
 let audio = null;
@@ -220,15 +225,17 @@ function frame(ms = 0) {
     // The sound's front along this path: 343 m/s, slowed twelve times.
     const age = Math.max(0, t - r.born), d = age * (343 / 12), n = r.pts.length;
     let k = 0; while (k < n - 1 && r.cum[k + 1] <= d) k++;
-    const pos = r.line.geometry.attributes.position, col = r.line.geometry.attributes.color;
-    for (let i = 0; i <= k; i++) pos.setXYZ(i, r.pts[i].x, r.pts[i].y, r.pts[i].z);
-    if (k < n - 1) { const u = (d - r.cum[k]) / (r.cum[k + 1] - r.cum[k]), q = r.pts[k].clone().lerp(r.pts[k + 1], u); pos.setXYZ(k + 1, q.x, q.y, q.z); }
-    // Bright at the head, dimmer behind it; the whole path fades with the echo.
-    const tail = Math.max(0, 1 - age / 8.5);
-    for (let i = 0; i <= Math.min(n - 1, k + 1); i++) { const back = Math.max(0, d - (r.cum[i] ?? d)); const g = tail * (0.25 + 1.6 * Math.exp(-back / 12)); col.setXYZ(i, NEON.r * g, NEON.g * g, NEON.b * g); }
-    pos.needsUpdate = true; col.needsUpdate = true;
-    r.line.geometry.setDrawRange(0, Math.min(n, k + 2));
-    if (tail <= 0) { S.root.remove(r.line); r.gone = true; }
+    const P6 = r.line.geometry.attributes.instanceStart.data, C6 = r.line.geometry.attributes.instanceColorStart.data;
+    // Segments behind the front are whole; the one at the front ends where the sound has got to.
+    for (let i = 0; i < Math.min(k, n - 1); i++) { const q = r.pts[i + 1]; P6.array.set([q.x, q.y, q.z], i * 6 + 3); }
+    if (k < n - 1) { const u = (d - r.cum[k]) / (r.cum[k + 1] - r.cum[k]), q = r.pts[k].clone().lerp(r.pts[k + 1], u); P6.array.set([q.x, q.y, q.z], k * 6 + 3); }
+    // Bright near the front, dimmer behind it; the whole path fades with the echo.
+    const tail = Math.max(0, 1 - age / 12);
+    const g = (i) => tail * (0.3 + 1.6 * Math.exp(-Math.max(0, d - r.cum[Math.min(i, n - 1)]) / 14));
+    for (let i = 0; i <= Math.min(k, n - 2); i++) { const a = g(i), b = g(i + 1); C6.array.set([NEON.r * a, NEON.g * a, NEON.b * a, NEON.r * b, NEON.g * b, NEON.b * b], i * 6); }
+    P6.needsUpdate = true; C6.needsUpdate = true;
+    r.line.geometry.instanceCount = Math.min(n - 1, k + 1);
+    if (tail <= 0) { S.root.remove(r.line); r.line.geometry.dispose(); r.gone = true; }
   }
   view.rays = view.rays.filter((r) => !r.gone);
   fatMat.color.copy(heroColour);
@@ -360,6 +367,27 @@ function chord(r, keys = [50, 53, 57, 62], sec = 3.4, gain = CHORD_GAIN) {
   audio.play(rankChord(r, keys, sec), rankCentre(r), r.pipes[0].pedal ? 'pedal' : 'great', gain);
   glow(r, keys, sec + 0.3);
 }
+// A phrase on one rank: notes as [key, start s, length s]. Pipes light as they sound.
+function phrase(r, notes, gain = CHORD_GAIN) {
+  const end = Math.max(...notes.map(([, t, d]) => t + d)) + 0.8, x = new Float32Array(Math.round(end * SR));
+  for (const [k, t, d] of notes) {
+    const v = results.get(`${r.pipes[0].stop}:${k}`); if (!v) continue;
+    const pipe = new FluePipe(SR, v.params, 77 + k), a = Math.round(t * SR), off = Math.round(d * SR);
+    pipe.noteOn();
+    for (let i = 0; a + i < x.length; i++) { if (i === off) pipe.noteOff(); x[a + i] += pipe.tick(1); }
+    const p = byId.get(`${r.pipes[0].stop}:${k}`);
+    if (p && p !== hero) { setTimeout(() => { p.state = null; organ.setPipe(p, 'sounding', 0.9); }, t * 1000); setTimeout(() => { p.state = null; organ.setPipe(p, 'voiced'); }, (t + d) * 1000); }
+  }
+  audio.play(x, rankCentre(r), r.pipes[0].pedal ? 'pedal' : 'great', gain);
+}
+// The opening of Bach's Toccata in D minor: the mordent A-G-A in octaves, a
+// pause, the run down to D, then low D and the chord.
+const TOCCATA = {
+  manual: [[81, 0, 0.09], [79, 0.09, 0.09], [81, 0.18, 1.2], [69, 0, 0.09], [67, 0.09, 0.09], [69, 0.18, 1.2],
+    ...[79, 77, 76, 74, 73].flatMap((k, i) => [[k, 2.0 + i * 0.13, 0.13], [k - 12, 2.0 + i * 0.13, 0.13]]), [74, 2.65, 1.0], [62, 2.65, 1.0],
+    [62, 4.1, 1.4], [65, 4.1, 1.4], [69, 4.1, 1.4], [74, 4.1, 1.4]],
+  pedal: [[38, 3.75, 1.75]],
+};
 const rankCentre = (r) => { const c = [0, 0, 0]; for (const p of r.pipes) { c[0] += p.mx; c[1] += p.my; c[2] += p.mz + p.foot; } return c.map((v) => v / r.pipes.length); };
 
 // The building's cells, to keep drawn rays inside it.
@@ -399,7 +427,7 @@ function startTracing() {
   return Promise.all(parts.map((s, i) => new Promise((ok) => {
     const w = new Worker('../engine/trace-worker.js', { type: 'module' });
     w.onmessage = (e) => { ok({ ...s, ...e.data }); w.terminate(); };
-    w.postMessage({ id: s.id, src: [s.pos[0], 0, s.pos[2]], rec: ECHO_AT, rays: 30000, seed: 17 + i * 101, sr: SR, maxTime: ROOM_ID === 'stpauls' ? 10 : 7.5, paths: 24, direct: false, room: ROOM_ID });
+    w.postMessage({ id: s.id, src: [s.pos[0], 0, s.pos[2]], rec: ECHO_AT, rays: 30000, seed: 17 + i * 101, sr: SR, maxTime: ROOM_ID === 'stpauls' ? 10 : 7.5, paths: 60, direct: false, room: ROOM_ID });
   })));
 }
 
@@ -560,9 +588,10 @@ async function story(heroReady, traced) {
   await sleep(1600);
   // Full organ: a moment's quiet, then one chord.
   await sleep(800);
-  for (const r of ORDER.map((n) => rank[n]).filter((r) => r.pipes.every((p) => results.has(p.id)))) chord(r, [50, 54, 57, 62], 3.2);
+  // Full organ: the opening of Bach's Toccata in D minor.
+  for (const r of ORDER.map((n) => rank[n]).filter((r) => r.pipes.every((p) => results.has(p.id)))) phrase(r, r.pipes[0].pedal ? TOCCATA.pedal : TOCCATA.manual, CHORD_GAIN * 1.2);
   caseLines.material.opacity = 1;
-  await sleep(3600);
+  await sleep(6800);
   clearInterval(rush); onVoiced = flash; for (const id of pending.splice(0)) flash(id);
   await cardOff();
 
@@ -584,30 +613,46 @@ async function story(heroReady, traced) {
   const tr = await traced;
   if (!audio.make || audio.make === 9) audio.setEcho(tr);
   await sleep(1500);
-  await card('', 'Its echo', 'We trace how sound bounces round the building and check it against a real recording made there. Here is one chord, slowed down twelve times.');
+  await card('', 'Its echo', 'We trace how sound bounces round the building and check it against a real recording made there. Here is one chord, held, with its sound slowed down twelve times.');
   // Into the building as the chord sounds, so the echo is seen from inside.
-  cut(ROOM_UI.inside(MID), 3.5);
-  await sleep(500);
-  for (const r of ORDER.map((n) => rank[n]).filter((r) => r.done === r.pipes.length)) chord(r, [50, 53, 57, 62], 0.8);
-  const born = now();
-  for (const r of tr) r.paths.forEach((path) => {
+  // The church dims and goes quiet first; then one short, hard chord, and its
+  // echo is left ringing on its own.
+  const dim0 = now();
+  const dimmer = setInterval(() => { const u = Math.min(1, (now() - dim0) / 0.8); church = 0.55 - 0.3 * u; reveal(1); if (u >= 1) clearInterval(dimmer); }, 50);
+  storyTimers.push(dimmer);
+  await sleep(900);
+  if (bloom) bloom.strength = 1.1;
+  for (const r of ORDER.map((n) => rank[n]).filter((r) => r.pipes.every((p) => results.has(p.id)))) chord(r, [50, 53, 57, 62], 2.5, CHORD_GAIN * 1.3);
+  // Each phrase sends out its own wave of sound paths: the mordent, the run,
+  // and the chord.
+  const paths = [];
+  for (const r of tr) for (const path of r.paths) {
     // Keep each path inside the drawn building.
     const keep = [path[0]];
     for (let i = 1; i < path.length; i++) { const m = path[i - 1].map((v, k) => (v + path[i][k]) / 2); if (!insideRoom(m)) break; keep.push(path[i]); }
-    if (keep.length < 2) return;
-    const pts = keep.map((q) => P(...q));
-    const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
-    const g = new THREE.BufferGeometry().setFromPoints(pts);
-    g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(pts.length * 3), 3));
-    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, toneMapped: false, fog: false }));
-    S.root.add(line); view.rays.push({ line, pts, cum, born });
-  });
+    if (keep.length >= 2) paths.push(keep.map((q) => P(...q)));
+  }
+  const launch = (share) => {
+    const born = now();
+    paths.forEach((pts, i) => {
+      if ((i * 7919) % 100 >= share * 100) return;
+      const cum = [0]; for (let j = 1; j < pts.length; j++) cum.push(cum[j - 1] + pts[j].distanceTo(pts[j - 1]));
+      const seg = []; for (let j = 0; j + 1 < pts.length; j++) seg.push(pts[j].x, pts[j].y, pts[j].z, pts[j + 1].x, pts[j + 1].y, pts[j + 1].z);
+      const g = new LineSegmentsGeometry(); g.setPositions(seg); g.setColors(new Float32Array(seg.length)); g.instanceCount = 0;
+      const line = new LineSegments2(g, rayMat); line.frustumCulled = false;
+      S.root.add(line); view.rays.push({ line, pts, cum, born });
+    });
+  };
+  launch(1);
+  // Watch it bounce from outside for a moment, then come slowly in among it.
+  setTimeout(() => cut(ROOM_UI.inside(MID), 6.5), 1800);
   // Come back into the building while it rings, among the paths.
-  setTimeout(() => { exterior = false; reveal(1); }, 1800);
+  setTimeout(() => { exterior = false; reveal(1); }, 5200);
   // Once inside, drift slowly while it rings.
-  setTimeout(() => { const s = now(), A = ROOM_UI.inside(MID); cut((t) => ({ p: lerp(A.p, [A.p[0] + 8, A.p[1] * 0.5, A.p[2] - 3], ease((t - s) / 8)), a: A.a }), 0); }, 3100);
-  await sleep(9000);
+  setTimeout(() => { const s = now(), A = ROOM_UI.inside(MID); cut((t) => ({ p: lerp(A.p, [A.p[0] + 7, A.p[1] * 0.6, A.p[2]], ease((t - s) / 6)), a: A.a }), 0); }, 8400);
+  await sleep(11500);
   await cardOff();
+  church = 0.55; reveal(1); if (bloom) bloom.strength = 0.55;
   fog(0.009);
   await cut(PLAY_SHOT(), 6);
   clearInterval(tick);
@@ -632,7 +677,7 @@ function toPlay(traced) {
   for (const r of view.rays) S.root.remove(r.line);
   view.rays = [];
   caseLines.material.opacity = 1;
-  church = 0.55; reveal(1); fog(0.009);
+  church = 0.55; reveal(1); fog(0.009); if (bloom) bloom.strength = 0.55;
   S.camera.fov = baseFov; S.camera.updateProjectionMatrix();
   traced.then((tr) => { audio.setEcho(tr); audio.openEcho(1.5, 1); });
   const count = $('#count');
