@@ -20,13 +20,31 @@
   section, #contents { scroll-margin-block-start: 60px; }
   h1 { color: var(--ink); font-weight: 300; font-size: clamp(36px, 7vw, 60px); line-height: 1; letter-spacing: -0.03em; margin-block: 24px 16px; }
   .lede { font-size: clamp(18px, 2.2vw, 21px); color: var(--ink); }
-  #contents ol { list-style: none; margin-block: 36px 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15em), 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
-  #contents li { background: #000; }
-  #contents a { display: flex; flex-direction: column; gap: 4px; min-block-size: 44px; padding: 14px 16px; text-decoration: none; color: var(--ink); }
-  #contents a small { color: var(--dim); font-size: 14px; line-height: 1.4; }
-  #contents a:active { background: #0d0d10; }
-  @media (hover: hover) and (pointer: fine) { #contents a:hover { background: #0d0d10; } }
-  #contents a span, h2 span { font: 12px/1 ui-monospace, "SF Mono", Menlo, monospace; color: var(--neon); }
+  .toc { position: relative; }
+  .toc summary { list-style: none; display: flex; align-items: center; gap: 8px; min-block-size: 44px; cursor: pointer; color: var(--body); font-size: 15px; }
+  .toc summary::-webkit-details-marker { display: none; }
+  .toc summary::after { content: ""; inline-size: 7px; block-size: 7px; border-inline-end: 1px solid currentColor; border-block-end: 1px solid currentColor; rotate: 45deg; translate: 0 -2px; }
+  .toc[open] summary::after { rotate: 225deg; translate: 0 2px; }
+  .toc ol { list-style: none; position: absolute; inset-inline-end: 0; inset-block-start: 100%; inline-size: min(300px, calc(100vw - 32px)); background: #050507; border: 1px solid var(--line); padding: 6px 0; }
+  .toc a { display: flex; gap: 12px; align-items: center; min-block-size: 44px; padding-inline: 16px; color: var(--body); text-decoration: none; }
+  .toc a:active { color: var(--neon); }
+  @media (hover: hover) and (pointer: fine) { .toc summary:hover, .toc a:hover { color: var(--ink); } }
+  .toc a span, h2 span { font: 12px/1 ui-monospace, "SF Mono", Menlo, monospace; color: var(--neon); }
+  /* Big play buttons and controls for the figures. */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; padding: 14px calc(var(--m) * 0.5) 0; }
+  .play { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 12px; min-block-size: 64px; color: var(--ink); }
+  .play::before { content: ""; flex: none; inline-size: 62px; block-size: 62px; border-radius: 50%; border: 1px solid var(--neon); background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 22'%3E%3Cpath d='M2 1l17 10L2 21z' fill='%23ff3d6e'/%3E%3C/svg%3E") 56% 50% / 18px no-repeat; }
+  .play[aria-pressed="true"]::before { background: var(--neon) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M3 3h5v14H3zM12 3h5v14h-5z' fill='%23000'/%3E%3C/svg%3E") 50% 50% / 18px no-repeat; box-shadow: 0 0 24px rgba(255, 61, 110, 0.45); }
+  .play:active::before { background-color: rgba(255, 61, 110, 0.25); }
+  @media (hover: hover) and (pointer: fine) { .play:hover::before { box-shadow: 0 0 18px rgba(255, 61, 110, 0.35); } }
+  .seg { display: inline-flex; border: 1px solid #3e3d3a; }
+  .seg button { all: unset; cursor: pointer; min-block-size: 44px; padding-inline: 14px; display: inline-flex; align-items: center; font-size: 14px; color: var(--body); }
+  .seg button[aria-pressed="true"] { background: #1b1b1f; color: var(--ink); box-shadow: inset 0 -2px 0 var(--neon); }
+  .seg button:active { color: var(--neon); }
+  .slider { display: grid; grid-template-columns: 7.5em 1fr 6.5em; align-items: center; gap: 12px; inline-size: 100%; font-size: 14px; }
+  .slider output { color: var(--ink); font: 13px/1 ui-monospace, "SF Mono", Menlo, monospace; text-align: end; }
+  input[type="range"] { inline-size: 100%; min-block-size: 44px; accent-color: var(--neon); background: transparent; }
+  .readout { min-block-size: 1.6em; padding-inline: calc(var(--m) * 0.5); color: var(--ink); font: 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
   .sources { list-style: decimal; padding-inline-start: 1.4em; font-size: 15px; }
   .sources li { margin-block-start: 8px; }
   sup a { display: inline-block; font-size: 12px; line-height: 1; text-decoration: none; color: var(--neon); padding: 16px 19px; margin: -16px -16px; } /* a 44px tap area round a small number */
@@ -74,30 +92,39 @@
 </head>
 <body>
 <main>
-  <div class="bar"><a href="app.html">← The Voicer</a><a href="#contents">Contents</a></div>
+  <div class="bar"><a href="app.html">← The Voicer</a>
+  <details class="toc"><summary>Contents</summary><ol>
+    <li><a href="#pipe"><span>01</span>The pipe</a></li>
+    <li><a href="#voicing"><span>02</span>Voicing</a></li>
+    <li><a href="#organ"><span>03</span>The organ</a></li>
+    <li><a href="#building"><span>04</span>The cathedral</a></li>
+    <li><a href="#echo"><span>05</span>The echo</a></li>
+    <li><a href="#check"><span>06</span>How we check it</a></li>
+    <li><a href="#space"><span>07</span>Sound in space</a></li>
+    <li><a href="#songs"><span>08</span>Songs into organ music</a></li>
+    <li><a href="#limits"><span>09</span>What isn't done yet</a></li>
+    <li><a href="#sources"><span>10</span>Sources</a></li>
+  </ol></details>
+  </div>
   <h1>How we built it</h1>
   <p class="lede">This started with <a href="https://github.com/jamesondh/chimera-vocal-synth">Chimera</a>, a voice synthesiser that builds a singing voice from a simulated throat: lungs, vocal folds, mouth, and no recordings. After using it for <a href="https://github.com/b1rdmania/chimera-10cc">a cover of 10cc's I'm Not in Love</a>, I started thinking about organs. The pipe organ was the original robot: a machine that turns air into music. I love reverb, and I love Bach's organ music, so I wanted to see whether I could model a real pipe organ in a real cathedral, convincingly, without melting my MacBook Air.</p>
   <p>This is how it works. No recordings of pipes are used anywhere. Every sound is worked out live from how air moves through a pipe and how sound moves through the building.</p>
 
-  <nav id="contents" aria-label="Contents"><ol>
-    <li><a href="#pipe"><span>01</span>The pipe<small>How air makes a note, and the model of it.</small></a></li>
-    <li><a href="#voicing"><span>02</span>Voicing<small>Toe, cut-up, nicks, length: tuning each pipe by measurement.</small></a></li>
-    <li><a href="#organ"><span>03</span>The organ<small>Seventeen ranks, 830 pipes, from York's stoplist.</small></a></li>
-    <li><a href="#building"><span>04</span>The cathedral<small>York Minster as an acoustic model.</small></a></li>
-    <li><a href="#echo"><span>05</span>The echo<small>Ray tracing sound through the building.</small></a></li>
-    <li><a href="#check"><span>06</span>How we check it<small>Against real recordings, spot by spot.</small></a></li>
-    <li><a href="#space"><span>07</span>Sound in space<small>Six sources and the camera as listener.</small></a></li>
-    <li><a href="#songs"><span>08</span>Songs into organ music<small>How a pop MIDI becomes an organ arrangement.</small></a></li>
-    <li><a href="#limits"><span>09</span>What isn't done yet<small>The honest list.</small></a></li>
-    <li><a href="#sources"><span>10</span>Sources<small>Papers, data and standards.</small></a></li>
-  </ol></nav>
+
 
   <section id="pipe">
     <h2><span>01</span>The pipe</h2>
     <p>Most organ pipes are <b>flue pipes</b>.<sup><a href="#s-pipe">3</a></sup> They have no reed and no moving parts. Air from the wind chest enters through a small hole in the tip of the foot (the <b>toe</b>), rises through the foot, and is squeezed through a narrow slit (the <b>flue</b>) between the front of the foot and a flat plate called the <b>languid</b>. That makes a thin sheet of air, the <b>jet</b>, which shoots up across the <b>mouth</b> and hits the sharp <b>upper lip</b>.</p>
     <figure>
       <div class="stage tall" id="fig-pipe"></div>
-      <figcaption>Figure 1. One of our pipes, Open Diapason C3, drawn from its real speaking length. Drag to turn it.</figcaption>
+      <div class="controls">
+        <button class="play" id="pipe-play" aria-pressed="false">Play this pipe</button>
+        <label class="slider">Length <input type="range" id="pipe-len" min="36" max="84" value="48" step="1"><output id="pipe-len-out"></output></label>
+        <label class="slider">Cut-up <input type="range" id="pipe-cut" min="0.28" max="0.72" value="0.5" step="0.01"><output id="pipe-cut-out"></output></label>
+        <label class="slider">Wind <input type="range" id="pipe-wind" min="0.5" max="1.3" value="1" step="0.01"><output id="pipe-wind-out"></output></label>
+      </div>
+      <p class="readout" id="pipe-readout" aria-live="polite"></p>
+      <figcaption>Figure 1. One of our pipes, drawn from its real speaking length; drag to turn it. Change its length, the height of its mouth and its wind, then play it: the model works out the note it actually speaks. Lower the mouth far enough and it leaps to a higher note, which is what voicing has to fix.</figcaption>
     </figure>
     <p>A jet hitting an edge is unstable: it flips between going inside and outside the lip. On its own that would make only a faint hiss. Above the mouth, though, sits the <b>body</b>: a column of air with its own natural frequencies. Each flip of the jet pushes air into the column; the column's pressure wave travels up, reflects at the top, comes back and bends the jet the other way. The jet and the column lock together. That loop is what makes a pipe speak.</p>
     <h3>The note</h3>
@@ -154,6 +181,7 @@
     <figure>
       <div class="legend" aria-hidden="true"><span>Measured after each step of voicing one pipe, live in your browser</span></div>
       <div class="charts" id="fig-voicing"></div>
+      <div class="controls"><button class="play" id="voice-play" aria-pressed="false">Play the voicing, step by step</button></div>
       <div class="steps" id="fig-voicing-play" aria-label="Hear each step"></div>
       <figcaption>Figure 3. Open Diapason D♯4, voiced here as this page loaded. Pitch error is clipped at ±150 cents; the first tries are an octave or more out. Press a step to hear it.</figcaption>
     </figure>
@@ -197,6 +225,15 @@
     </ul>
     <p>The result is an energy histogram for each band: how much sound arrives at each millisecond. From it we measure the echo the way acousticians do. Integrating the energy backwards (the Schroeder integral<sup><a href="#s-schroeder">7</a></sup>) gives a decay curve, measured as ISO 3382-1 sets out<sup><a href="#s-iso3382">8</a></sup>; <b>T30</b> is how long the sound takes to fall by 60 dB, worked out from its slope between −5 and −35 dB.</p>
     <span class="eq">T30 at 500 Hz, York Minster:   measured 8.37 s   model 8.37 s</span>
+    <figure>
+      <div class="stage" id="fig-rays"></div>
+      <div class="controls">
+        <button class="play" id="rays-play" aria-pressed="false">Fire the sound</button>
+        <div class="seg" role="group" aria-label="Sound"><button data-src="clap" aria-pressed="true">Clap</button><button data-src="chord" aria-pressed="false">Chord</button></div>
+      </div>
+      <p class="readout" id="rays-readout" aria-live="polite"></p>
+      <figcaption>Figure 6. A clap or a chord under the central tower, heard from the nave through the traced echo, while sixty of the traced sound paths cross the plan at the speed of sound slowed twelve times.</figcaption>
+    </figure>
     <p>To make it something you can hear, we turn the histogram into a two-ear impulse response: noise shaped in each band to the traced energy, the direct sound arriving first, and each ear getting its own version, with the far ear delayed and shadowed by the head. The organ's sound is then convolved with it live in the browser. In the app, the bright lines are real ray paths from this trace, drawn at the speed of sound slowed twelve times.</p>
   </section>
 
@@ -207,9 +244,19 @@
     <figure>
       <div class="legend"><span><i style="border-color:#e9e7e1;border-block-start-style:dashed"></i>Measured in the building</span><span><i style="border-color:#ff3d6e"></i>Our model</span></div>
       <div class="charts" id="fig-t30"></div>
-      <figcaption>Figure 6. Echo time (T30) in six octave bands. "Before tuning" is the model straight from the plan and the material tables: a genuine prediction. "After tuning" adds one correction factor per band, fitted to the same recording.</figcaption>
+      <figcaption>Figure 7. Echo time (T30) in six octave bands. "Before tuning" is the model straight from the plan and the material tables: a genuine prediction. "After tuning" adds one correction factor per band, fitted to the same recording.</figcaption>
     </figure>
     <div class="wide"><table id="t30-table" aria-label="Echo times in seconds"></table></div>
+    <h3>Hear the difference</h3>
+    <p>The same clap or chord, from under York Minster's tower to the middle of the nave: once through the real recorded echo, once through our model. They are matched for loudness. The recording is one microphone; ours is two-ear, so it sounds wider on headphones.</p>
+    <figure>
+      <div class="controls">
+        <button class="play" id="ab-real" aria-pressed="false">The real Minster</button>
+        <button class="play" id="ab-model" aria-pressed="false">Our model</button>
+        <div class="seg" role="group" aria-label="Sound"><button data-src="clap" aria-pressed="true">Clap</button><button data-src="chord" aria-pressed="false">Chord</button></div>
+      </div>
+      <p class="readout" id="ab-readout" aria-live="polite"></p>
+    </figure>
     <ul>
       <li><b>Before tuning</b> the model was within 5–10% in York's middle bands and within 2–13% in every band at St Paul's. The low bands at York came out short: the real building has more low-frequency echo than the material tables suggest.</li>
       <li><b>After tuning</b> it matches within about 1%, but that is a fit to one recording, not an independent test.</li>
