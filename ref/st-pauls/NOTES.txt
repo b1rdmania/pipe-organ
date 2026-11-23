@@ -1,0 +1,20 @@
+This folder contains the St Paul's IRs, with the following format for each position:
+
+- A mono IR
+- A B-format IR
+- A Mid-Side stereo IR generated from the B-format recording
+
+Each is individually normalised, trimmed to 15s, and presented as a 32-bit, 96 kHz wav.
+
+For each position and format, there are three IRs - the two takes recorded at each one and the average of the two.
+
+The 8 positions were as follows:
+
+P1 - Source under the dome, receiver in the nave, SField gain max (42)
+P2 - Source in the nave, receiver under the dome, SField gain max (42)
+P3 - Source and receiver under the dome, SField gain 39
+P4 - Source and receiver in the choir, SField gain max (42)
+P5 - Source and receiver at base of geometric stairs, SField gain 18
+P6 - Source and receiver in whispering gallery, source pointed at wall, SField gain 33
+P7 - Source and receiver in whispering gallery, source pointed at receiver, SField gain 33
+P8 - Source adn receiver in library, SField gain 36

@@ -18,8 +18,12 @@ export class Player {
     this.levels = new Map(); // id -> level, for the picture
   }
 
-  load(events) {
+  // box: the Swell shutters over time, [[seconds, gain]]; events with
+  // div 'swell' sound through it. Without it every pipe plays at its gain.
+  load(events, box = []) {
     this.events = events.map((e) => ({ ...e, s: Math.round(e.t * this.sr), e: Math.round((e.t + e.dur) * this.sr), id: `${e.stop}:${e.key}` }));
+    this.box = box.map(([t, g]) => [Math.round(t * this.sr), g]);
+    this.bi = 0;
     this.next = 0;
     this.t = 0;
     for (const v of this.pool) { v.busy = false; v.pipe.reset(); }
@@ -40,7 +44,7 @@ export class Player {
     if (!v) v = this.pool.find((v) => !v.busy);
     if (!v) return;
     if (v.id !== ev.id || !v.busy) { v.pipe.set(params); v.pipe.reset(); }
-    v.busy = true; v.id = ev.id; v.until = ev.e;
+    v.busy = true; v.id = ev.id; v.until = ev.e; v.gain = ev.gain ?? 1; v.swell = ev.div === 'swell';
     v.pipe.noteOn();
   }
 
@@ -53,11 +57,19 @@ export class Player {
       this.wob += (this.rand() - this.wob) * 0.0005;
       const trem = st.tremulant ? st.tremulant * Math.sin((2 * Math.PI * (st.tremRate || 6) * this.t) / this.sr) : 0;
       const wind = 1 + st.wobble * this.wob * 20 + trem - Math.min(0.03, this.active * 0.0006);
+      // Swell box, linear between its points.
+      let bx = 1;
+      const B = this.box;
+      if (B.length) {
+        while (this.bi + 1 < B.length && B[this.bi + 1][0] <= this.t) this.bi++;
+        const a = B[this.bi], b = B[this.bi + 1];
+        bx = this.t <= a[0] ? a[1] : b ? a[1] + ((b[1] - a[1]) * (this.t - a[0])) / (b[0] - a[0]) : a[1];
+      }
       let s = 0, act = 0;
       for (const v of this.pool) {
         if (!v.busy) continue;
         if (this.t >= v.until && v.pipe.target) v.pipe.noteOff();
-        s += v.pipe.tick(wind);
+        s += v.pipe.tick(wind) * (v.gain ?? 1) * (v.swell ? bx : 1);
         if (v.pipe.idle) v.busy = false; else act++;
       }
       this.active = act;

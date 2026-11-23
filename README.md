@@ -1,8 +1,8 @@
 # The Voicer
 
-The organ was the original robot instrument. This is the next one.
+A pipe organ rebuilt in software. Every pipe is a physical model that is made and voiced in front of you, then played in a cathedral whose echo is ray-traced and checked against a real recording. No samples.
 
-Pick a song and a place. The Voicer builds an organ for them, tunes every pipe by ear, and plays.
+Live: https://the-voicer.andy-ff7.workers.dev (headphones)
 
 ## Run
 
@@ -10,25 +10,30 @@ Pick a song and a place. The Voicer builds an organ for them, tunes every pipe b
 python3 -m http.server 5320 --bind 127.0.0.1
 ```
 
-Open http://127.0.0.1:5320. Drop any MIDI file on the page to use it.
+Open http://127.0.0.1:5320/minster/app.html. Add `?room=stpauls` for St Paul's Cathedral.
 
-Offline render to WAV:
+## What it does
 
-```sh
-node tools/render.mjs songs/ToccataFugue.mid cathedral cathedral 0 32
-```
+1. **The pipe.** A flue pipe as a jet-drive waveguide. It arrives as a pipe maker leaves it (cut long, mouth low, toe open) and the voicer sets its toe (level), cut-up (tone), nicks (onset noise) and length (pitch), measuring each step, then checks it holds its note under unsteady wind.
+2. **The organ.** All 830 pipes of a York Minster flue chorus (17 ranks) are voiced the same way in Web Workers.
+3. **The room.** York Minster and St Paul's Cathedral as cell models, ray-traced in six octave bands and calibrated against measured impulse responses from OpenAIR. The organ plays through the traced two-ear echo, with each part of the case as an HRTF source; the listener is the camera.
+4. **Play.** Any MIDI file is arranged for the organ (pedal, Great, enclosed Swell) and played live in an AudioWorklet.
 
-## Engine
+## Inside
 
-| File | Job |
+| Path | Job |
 |---|---|
-| `engine/pipe.js` | One flue pipe: a jet-drive waveguide (jet, lip, air column). |
-| `engine/voicer.js` | Cuts each pipe long, listens, trims or reshapes the mouth until it speaks in tune and holds its note. |
-| `engine/organ.js` | Stops (ranks) and organ styles. |
-| `engine/arranger.js` | Song + place → organ style, pedal and manual parts, tempo for the echo. |
-| `engine/room.js` | Places as sound: mirror-image early reflections and a late tail per octave band (Eyring). |
-| `engine/player.js` | Plays the arrangement on one shared, slightly unsteady wind supply. |
-| `engine/organ-worklet.js` | The player on the audio thread. |
-| `engine/voicer-worker.js` | Voicing in parallel workers. |
+| `engine/pipe.js` | One flue pipe: jet, lip, air column. |
+| `engine/voicer.js` | Voices a pipe: toe, cut-up, nicks, length, steadiness. |
+| `engine/organ.js` | Ranks (stops) and the York stoplist. |
+| `engine/arranger.js`, `engine/orchestrate.js` | MIDI to organ parts, divisions and registration. |
+| `engine/acoustics.js`, `engine/auralize.js` | Ray tracer and two-ear impulse responses. |
+| `engine/minster.js`, `engine/stpauls.js` | The two cathedrals as acoustic models, with sources and calibration. |
+| `engine/player.js`, `engine/organ-multi-worklet.js` | Plays an arrangement on the voiced pipes. |
+| `minster/app.html`, `minster/app.js` | The app: the guided build, then the song list. |
+| `minster/scene.js`, `minster/scene-stpauls.js` | The cathedrals in line art (Three.js). |
+| `tools/` | Calibration (`room-ir.mjs`), song checks, offline renders, the clip. |
 
-No samples. The sound is physics; the AI's job is design, arranging and voicing.
+## Measured data
+
+Impulse responses in `ref/` are from the OpenAIR library (University of York), CC BY 4.0: York Minster, and St Paul's Cathedral (Foteinou, Stevens and Murphy, 2022).

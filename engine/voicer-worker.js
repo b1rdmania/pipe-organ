@@ -10,7 +10,7 @@ self.onmessage = (e) => {
     const transfer = [];
     const steps = v.steps.map((s) => {
       if (s.audio) transfer.push(s.audio.buffer);
-      return { bore: s.bore, jetRatio: s.jetRatio, f: s.f, cents: s.cents, action: s.action, audio: s.audio };
+      return { bore: s.bore, jetRatio: s.jetRatio, foot: s.foot, f: s.f, cents: s.cents, action: s.action, audio: s.audio };
     });
     self.postMessage({ id: `${p.stop}:${p.key}`, ok: v.ok, target: v.target, params: v.params, steps }, transfer);
   }

@@ -60,7 +60,12 @@ export class FluePipe {
     // Stopped pipe: the closed top flips the reflection, period = 2 x bore and
     // only odd harmonics. The jet's travel time is a fraction of that period.
     const period = p.stopped ? 2 * this.boreLen : this.boreLen;
-    this.jetLen = Math.max(1, period * p.jetRatio);
+    // Toe: the hole in the pipe's foot sets the pressure at the mouth. Less
+    // pressure = a slower jet (longer travel time over the mouth) and less flow.
+    // jetRatio is the cut-up at full foot pressure; the jet speed goes as the
+    // square root of pressure, so the travel time goes as 1 / sqrt(foot).
+    this.foot = Math.max(0.05, p.foot ?? 1);
+    this.jetLen = Math.max(1, (period * p.jetRatio) / Math.sqrt(this.foot));
     // Wall and radiation loss as a one-pole lowpass. Its corner sits a set number
     // of harmonics above the pipe's own note, so a rank keeps one colour from
     // bass to treble (organ builders call this scaling).
@@ -121,19 +126,21 @@ export class FluePipe {
     const n = this.rand();
     // Kick: the pallet opens with a brief pressure surge, which helps a big pipe
     // find its note quickly, as real pipes do.
+    const A = this.foot; // flow scale: the whole jet scales with foot pressure
     const breath =
-      p.breath * this.env * wind * (1 + p.noise * n) * (1 + (p.kick ?? 0.35) * this.kickEnv) +
-      p.chiff * this.chiffEnv * this.env * n;
+      A * p.breath * this.env * wind * (1 + p.noise * n) * (1 + (p.kick ?? 0.35) * this.kickEnv) +
+      A * p.chiff * this.chiffEnv * this.env * n;
 
     const pd = breath - p.jetRefl * t;
     const jd = this.jet.tick(pd, this.jetLen);
     // Jet meets the lip: soft cubic, clipped. `offset` is how far the jet aims
     // off the lip; off-centre gives even harmonics (a principal's bite).
     const o = p.offset ?? 0;
-    const xj = jd + o;
+    const xj = jd / A + o;
     let j = xj * (xj * xj - 1) - o * (o * o - 1);
     if (j > 1) j = 1;
     else if (j < -1) j = -1;
+    j *= A;
 
     const into = j + p.endRefl * t;
     this.lastBore = this.bore.tick(into, this.boreLen);

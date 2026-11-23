@@ -38,3 +38,26 @@ export function measure(x, sr, fMin = 25, fMax = 5000) {
 
 export const cents = (f, target) => 1200 * Math.log2(f / target);
 export const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+// How a pipe starts to speak. `speak`: seconds until the tone is steady (each
+// stretch of one period repeats the next, and the level is up to 80% of the
+// steady level), from the first sound. `chiff`: the edge noise at the start,
+// as the high-frequency energy of the first 25 ms of sound over that of the
+// steady tone (0 = none). `f` is the pipe's measured pitch, not the target.
+export function onset(x, sr, f, steadyRms) {
+  let s0 = 0;
+  while (s0 < x.length - 1 && Math.abs(x[s0]) < 0.05 * steadyRms) s0++;
+  const P = Math.max(2, Math.round(sr / f));
+  const W = 2 * P;
+  let speak = x.length / sr;
+  for (let i = s0; i + W + P < x.length; i += Math.max(1, P >> 2)) {
+    let ab = 0, aa = 0, bb = 0;
+    for (let k = 0; k < W; k++) { const a = x[i + k], b = x[i + k + P]; ab += a * b; aa += a * a; bb += b * b; }
+    if (ab / Math.sqrt(aa * bb + 1e-12) > 0.97 && Math.sqrt(aa / W) > 0.8 * steadyRms) { speak = (i - s0) / sr; break; }
+  }
+  const hf = (a, b) => { let s = 0; for (let i = a + 1; i < b; i++) { const d = x[i] - x[i - 1]; s += d * d; } return s / Math.max(1, b - a - 1); };
+  const n25 = Math.min(x.length, s0 + Math.round(0.025 * sr));
+  const tail = Math.max(n25 + 1, x.length - Math.round(0.1 * sr));
+  const chiff = Math.sqrt(hf(s0, n25) / (hf(tail, x.length) + 1e-12));
+  return { speak, chiff };
+}
