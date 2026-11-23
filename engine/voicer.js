@@ -188,7 +188,9 @@ export function voicePipe(sr, stop, key, opts = {}) {
   for (let round = 0; round < 5 && done && !stable; round++) {
     stable = true;
     let jump = 0;
-    for (const [sd, w] of TRIALS) {
+    // Big pipes are slow to test and rarely jump: three trials for them.
+    const big = target < 80;
+    for (const [sd, w] of big ? TRIALS.slice(0, 3) : TRIALS) {
       const { m } = listen(sr, params, target, seed + sd, w, speakTime(target) * 2.5);
       const c = m.f > 0 ? cents(m.f, target) : -9999;
       if (!(Math.abs(c) < 15 && m.clarity > 0.93)) { stable = false; jump = c; break; }

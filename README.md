@@ -10,7 +10,7 @@ Live: https://the-voicer.andy-ff7.workers.dev (headphones)
 python3 -m http.server 5320 --bind 127.0.0.1
 ```
 
-Open http://127.0.0.1:5320/minster/app.html. Add `?room=stpauls` for St Paul's Cathedral.
+Open http://127.0.0.1:5320.
 
 ## What it does
 
@@ -30,9 +30,11 @@ Open http://127.0.0.1:5320/minster/app.html. Add `?room=stpauls` for St Paul's C
 | `engine/acoustics.js`, `engine/auralize.js` | Ray tracer and two-ear impulse responses. |
 | `engine/minster.js`, `engine/stpauls.js` | The two cathedrals as acoustic models, with sources and calibration. |
 | `engine/player.js`, `engine/organ-multi-worklet.js` | Plays an arrangement on the voiced pipes. |
-| `minster/app.html`, `minster/app.js` | The app: the guided build, then the song list. |
+| `minster/app.html`, `minster/app.js` | The app: the guided build, the camera, and playing. |
+| `minster/sound.js`, `minster/songs.js` | The spatial sound graph; the song list and MIDI search. |
 | `minster/scene.js`, `minster/scene-stpauls.js` | The cathedrals in line art (Three.js). |
-| `tools/` | Calibration (`room-ir.mjs`), song checks, offline renders, the clip. |
+| `tools/` | Room calibration (`room-ir.mjs`), arrangement checks (`arr-check.mjs`), offline renders, the clip. |
+| `docs/` | Design notes and reviews. |
 
 ## Measured data
 
