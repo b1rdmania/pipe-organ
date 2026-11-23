@@ -22,13 +22,14 @@ export function songList(play) {
     const f = pick.files[0]; if (!f) return;
     add({ title: f.name.replace(/\.midi?$/i, ''), by: 'your MIDI', data: await f.arrayBuffer() });
   };
+  $('#ownmidi').onclick = () => pick.click();
   function draw() {
     const ol = $('#songs'); ol.innerHTML = '';
-    for (const s of [...SONGS, { title: 'Your own MIDI…', choose: true }]) {
+    for (const s of SONGS) {
       const li = document.createElement('li'), b = document.createElement('button');
       b.textContent = s.title; b.setAttribute('aria-pressed', s === current);
       if (s.by) { const by = document.createElement('span'); by.textContent = s.by; b.append(by); }
-      b.onclick = () => (s.choose ? pick.click() : choose(s));
+      b.onclick = () => choose(s);
       li.append(b); ol.append(li);
     }
   }

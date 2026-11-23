@@ -50,7 +50,7 @@
   .ctl.gone { opacity: 0; pointer-events: none; }
   #progress { position: fixed; left: 0; bottom: 0; height: 1px; width: 0; background: var(--neon); }
 
-  .ui { position: fixed; inset-inline-start: var(--l); inset-block-start: var(--t); inline-size: min(340px, calc(100vw - var(--l) - var(--r))); max-block-size: calc(100dvh - var(--t) - var(--b) - 56px); overflow: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 16px; }
+  .ui { position: fixed; inset-inline-start: var(--l); inset-block-start: var(--t); inline-size: min(360px, calc(100vw - var(--l) - var(--r))); max-block-size: calc(100dvh - var(--t) - var(--b) - 56px); overflow: auto; overscroll-behavior: contain; padding: 16px 18px 18px; background: rgba(0, 0, 0, 0.82); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: 16px; }
   ol { list-style: none; border-top: 1px solid var(--line); }
   li { border-bottom: 1px solid var(--line); }
   li button { all: unset; display: flex; justify-content: space-between; align-items: center; gap: 12px; inline-size: 100%; min-block-size: 44px; cursor: pointer; color: #a9a7a1; }
@@ -61,10 +61,14 @@
   #find input { all: unset; display: block; inline-size: 100%; min-block-size: 44px; font-size: 16px; border-block-end: 1px solid var(--line); color: var(--ink); }
   #find input::placeholder { color: var(--dim); }
   #results:empty { display: none; }
-  #more { border-top: 0; margin-block-start: 8px; }
-  #more a { display: flex; align-items: center; min-block-size: 44px; color: #a9a7a1; text-decoration: none; }
-  @media (hover: hover) and (pointer: fine) { #more a:hover { color: var(--ink); } }
-  #more a:active { color: var(--neon); }
+  .ui .label { color: var(--dim); margin-block-end: -8px; }
+  .ui .primary { all: unset; cursor: pointer; display: flex; align-items: center; justify-content: center; min-block-size: 48px; border: 1px solid var(--neon); color: var(--ink); }
+  .ui .primary:active { background: var(--neon); color: #000; }
+  .ui .plain { all: unset; cursor: pointer; display: flex; align-items: center; min-block-size: 44px; color: #a9a7a1; border-block-end: 1px solid var(--line); margin-block-start: -16px; }
+  .ui .plain:active { color: var(--neon); }
+  .ui .how { display: flex; justify-content: space-between; align-items: center; min-block-size: 44px; color: var(--ink); text-decoration: none; border-block-start: 1px solid var(--line); padding-block-start: 4px; }
+  .ui .how:active { color: var(--neon); }
+  @media (hover: hover) and (pointer: fine) { .ui .primary:hover { background: rgba(255, 61, 110, 0.12); } .ui .plain:hover, .ui .how:hover { color: var(--neon); } }
 
   #live { position: fixed; inset-inline: 0; inset-block-end: 0; padding: 0 var(--r) var(--b) var(--l); display: flex; flex-direction: column; gap: 10px; }
   #stops { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -102,11 +106,15 @@
 <div id="progress"></div>
 <button id="skip" class="ctl fade gone">Skip</button>
 <button id="stopbtn" class="ctl fade gone">Stop</button>
-<section class="ui fade gone" id="ui">
+<section class="ui fade gone" id="ui" aria-label="Menu">
+  <p class="label num">Songs</p>
   <ol id="songs"></ol>
-  <form id="find"><input id="q" type="search" placeholder="Search a song" autocomplete="off" aria-label="Search a song"></form>
+  <button id="liveopen" class="primary">Play it yourself</button>
+  <p class="label num">Bring your own (beta)</p>
+  <form id="find"><input id="q" type="search" placeholder="Search for a song (beta)" autocomplete="off" aria-label="Search for a song (beta)"></form>
   <ol id="results"></ol>
-  <ol id="more"><li><button id="liveopen">Play it yourself</button></li><li><a href="how.html">How we built this</a></li></ol>
+  <button id="ownmidi" class="plain">Your own MIDI file (beta)</button>
+  <a class="how" href="how.html">How we built it <span aria-hidden="true">→</span></a>
 </section>
 <section id="live" class="fade gone" aria-label="Play the organ">
   <div id="stops"></div>
