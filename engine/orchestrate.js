@@ -22,8 +22,9 @@ export const GAIN = { tune: 1, harmony: 0.5, bass: 0.8 };
 // Rendered loudness per unit of the note-seconds estimate, per role
 // (tools/arr-render.mjs --calibrate). Lets the engine balance each song
 // before it is heard.
-export const CAL = { tune: 1, harmony: 1, bass: 1 };
-export const TARGET = { tune: 0.4, harmony: 0.35, bass: 0.25 };
+export const CAL = { tune: 1, harmony: 1.052, bass: 1.195 };
+// Shares of rendered RMS aimed for: the middle of each band.
+export const TARGET = { tune: 0.4, harmony: 0.38, bass: 0.22 };
 
 // Time to 90 % of full speech, ms, at keys 36 43 48 55 60 67
 // (tools/speech-york.mjs). A big pipe only gets notes long enough to speak.
@@ -32,7 +33,7 @@ const SPEAK = {
   ymPedDiap16: [360, 240, 170, 130, 100, 80], ymDouble16: [420, 240, 210, 130, 100, 70],
 };
 const SPEAK_KEYS = [36, 43, 48, 55, 60, 67];
-function speaks(stop, key, dur) {
+export function speaks(stop, key, dur) {
   const s = SPEAK[stop];
   if (!s) return true;
   let i = SPEAK_KEYS.findIndex((k) => k >= key); if (i < 0) i = s.length - 1;
@@ -304,7 +305,7 @@ function voices(midi, P) {
     if (!on.length || on.some((n) => n.key >= 48 && n.key < 60)) continue;
     const lo = on.reduce((x, n) => (n.key < x.key ? n : x));
     const t0 = Math.max(a, lo.t), t1 = Math.min(b, lo.t + lo.dur);
-    if (t1 - t0 > 0.1) add.push({ t: t0, dur: t1 - t0, key: fold(lo.key, 48, 59), mix: lo.mix });
+    if (t1 - t0 > 0.1) add.push({ t: t0, dur: t1 - t0, key: fold(lo.key, 48, 59), mix: lo.mix, tenor: true });
   }
   harm = tie([...harm, ...add], 0.3);
   return { tune, counter, bass, harm, shift };
@@ -323,7 +324,8 @@ function build(midi, P, opts) {
     const t = (n.t - from) / speed + offset, dur = Math.min(n.dur, to + 2 - n.t) / speed;
     for (const stop of stops) {
       if (!speaks(stop, n.key, dur)) continue;
-      if (stop === 'ymDouble16' && n.key < 48) continue; // no 16′ mud below tenor C
+      // No 16′ below tenor C, nor on a tenor copy: the copy already fills it.
+      if (stop === 'ymDouble16' && (n.key < 48 || n.tenor)) continue;
       let k = n.key;
       while (k + 12 * Math.log2(8 / STOPS[stop].feet) > 100) k -= 12;
       // A manual double is voiced under the unison, as English doubles are.
@@ -350,6 +352,16 @@ function build(midi, P, opts) {
     last[k] = e; out.push(e);
   }
   return { events: out, shift: v.shift };
+}
+
+// Most pipes sounding at once (a pipe struck again is one voice).
+export function peakVoices(events) {
+  const pts = [];
+  for (const e of events) pts.push([e.t, 1, `${e.stop}:${e.key}`], [e.t + e.dur, -1, `${e.stop}:${e.key}`]);
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const on = new Map(); let peak = 0;
+  for (const [, d, k] of pts) { const c = (on.get(k) || 0) + d; if (c) on.set(k, c); else on.delete(k); peak = Math.max(peak, on.size); }
+  return peak;
 }
 
 // Estimated loudness per role: incoherent sum of pipes, with the box.
@@ -395,6 +407,12 @@ export function orchestrate(midi, opts = {}) {
     for (const r of Object.keys(L)) gain[r] *= (TARGET[r] * tot) / L[r];
     const top = Math.max(...Object.values(gain)); for (const r in gain) gain[r] /= top;
     ({ events } = build(midi, P, { ...opts, gain }));
+  }
+  // The player has 128 voices: past 100 pipes at once, take off the
+  // coupler, then the Swell's 16′ and 4′.
+  for (const cut of [(e) => e.role === 'harmony' && e.div === 'great', (e) => e.div === 'swell' && (e.stop === 'ymDouble16' || e.stop === 'ymOctave4')]) {
+    if (peakVoices(events) <= 100) break;
+    events = events.filter((e) => !cut(e));
   }
   const box = P.box.map(([t, g]) => [t + offset, g]);
   const { from, to } = P.window;

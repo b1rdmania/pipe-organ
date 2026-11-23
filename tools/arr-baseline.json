@@ -33,7 +33,9 @@
     "harmony": 51
    },
    "peak": 14,
-   "restrike": 8
+   "restrike": 8,
+   "slow": 0,
+   "range": 0
   },
   "hash": "d04f1c4aa3ea",
   "n": 452,
@@ -79,7 +81,9 @@
     "harmony": 32
    },
    "peak": 18,
-   "restrike": 2
+   "restrike": 2,
+   "slow": 0,
+   "range": 0
   },
   "hash": "553d42a9bced",
   "n": 374,
@@ -123,7 +127,9 @@
     "tune": 56
    },
    "peak": 6,
-   "restrike": 0
+   "restrike": 0,
+   "slow": 0,
+   "range": 0
   },
   "hash": "9a47a51720f7",
   "n": 142,
@@ -167,7 +173,9 @@
     "tune": 28
    },
    "peak": 12,
-   "restrike": 50
+   "restrike": 50,
+   "slow": 0,
+   "range": 0
   },
   "hash": "90548f8b4a42",
   "n": 518,
@@ -211,7 +219,9 @@
     "harmony": 35
    },
    "peak": 14,
-   "restrike": 0
+   "restrike": 0,
+   "slow": 0,
+   "range": 0
   },
   "hash": "f381bdf7ca36",
   "n": 278,
@@ -252,7 +262,9 @@
     "bass": 8
    },
    "peak": 72,
-   "restrike": 0
+   "restrike": 0,
+   "slow": 81,
+   "range": 0
   },
   "hash": "3a636f130c90",
   "n": 1293,
@@ -298,7 +310,9 @@
     "tune": 78
    },
    "peak": 79,
-   "restrike": 0
+   "restrike": 0,
+   "slow": 3,
+   "range": 0
   },
   "hash": "c4733c6eaaec",
   "n": 1644,
@@ -340,7 +354,9 @@
     "bass": 2
    },
    "peak": 110,
-   "restrike": 0
+   "restrike": 0,
+   "slow": 430,
+   "range": 0
   },
   "hash": "bcb743c238d8",
   "n": 7124,

@@ -10,6 +10,7 @@ import { parseMidi } from '../engine/midi.js';
 import { arrange, autoParts } from '../engine/arranger.js';
 import { STYLES } from '../engine/organ.js';
 import { metrics, regStr } from './arr-metrics.mjs';
+import { speaks } from '../engine/orchestrate.js';
 
 const REG = {
   pop: { great: ['ymDiap8a', 'ymOctave4'], manual: ['ymDiap8a', 'ymOctave4'], swell: { ranks: ['ymStopped8', 'ymDiap8b'], gain: 0.5 }, pedal: ['ymPedSub16', 'ymPedPrin8'], pedalGain: 0.8 },
@@ -36,6 +37,14 @@ export function legacy(midi, s) {
   return { ...arr, from: s.from, to: s.to, speed: 0.82 };
 }
 
+// Big pipes given notes too short to speak (tools/speech-york.mjs), and keys
+// outside what the app voices (manual 36-93, pedal 36-67).
+function check(m, arr) {
+  m.slow = arr.events.filter((e) => !speaks(e.stop, e.key, e.dur)).length;
+  m.range = arr.events.filter((e) => (e.pedal ? e.key < 36 || e.key > 67 : e.key < 36 || e.key > 93)).length;
+  return m;
+}
+
 // Pass marks. Bach is judged only on sameness.
 export function judge(m, s, same) {
   if (s.bach) return same ? [] : ['events changed'];
@@ -46,11 +55,13 @@ export function judge(m, s, same) {
   if (m.span < 6) f.push(`span ${m.span}`);
   if (m.peak > 100) f.push(`peak ${m.peak}`);
   if (m.restrike) f.push(`restrike ${m.restrike}`);
+  if (m.slow) f.push(`${m.slow} notes too short for a 16′/32′ pipe to speak`);
+  if (m.range) f.push(`${m.range} keys outside the voiced compass`);
   return f;
 }
 
-const row = (m) => `${String(m.kept).padStart(4)}% ${String(m.pc).padStart(4)}% ${String(m.bass).padStart(4)}% ${String(m.polySrc).padStart(5)}→${String(m.polyArr).padEnd(5)} ${String(m.span).padStart(2)} ${String(m.peak).padStart(4)} ${String(m.restrike).padStart(4)}  ${['tune', 'harmony', 'bass'].map((k) => m.role[k] ?? 0).join('/')}`;
-const head = `${'song'.padEnd(14)} ${'kept'.padStart(5)} ${'pc'.padStart(5)} ${'bass'.padStart(5)} ${'poly'.padStart(11)} sp peak rstk  tune/harm/bass`;
+const row = (m) => `${String(m.kept).padStart(4)}% ${String(m.pc).padStart(4)}% ${String(m.bass).padStart(4)}% ${String(m.polySrc).padStart(5)}→${String(m.polyArr).padEnd(5)} ${String(m.span).padStart(2)} ${String(m.peak).padStart(4)} ${String(m.restrike).padStart(4)} ${String(m.slow).padStart(4)}  ${['tune', 'harmony', 'bass'].map((k) => m.role[k] ?? 0).join('/')}`;
+const head = `${'song'.padEnd(14)} ${'kept'.padStart(5)} ${'pc'.padStart(5)} ${'bass'.padStart(5)} ${'poly'.padStart(11)} sp peak rstk slow  tune/harm/bass`;
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (process.argv.includes('--baseline')) {
@@ -58,13 +69,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     for (const s of SONGS) {
       const midi = parseMidi(readFileSync(s.file));
       const arr = legacy(midi, s);
-      out[s.title] = { m: metrics(midi, arr), hash: hash(arr.events), n: arr.events.length, from: arr.from, to: arr.to };
+      out[s.title] = { m: check(metrics(midi, arr), arr), hash: hash(arr.events), n: arr.events.length, from: arr.from, to: arr.to };
     }
     writeFileSync(BASE, JSON.stringify(out, null, 1));
     console.log('saved', BASE.pathname);
   }
   const base = existsSync(BASE) ? JSON.parse(readFileSync(BASE)) : {};
-  const { orchestrate } = await import('../engine/orchestrate.js').catch(() => ({}));
+  const { orchestrate } = await import('../engine/orchestrate.js');
   console.log(head);
   const fails = [];
   for (const s of SONGS) {
@@ -73,7 +84,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (b) console.log(`${(s.title + ' was').padEnd(14)} ${row(b.m)}  ${b.from.toFixed(1)}–${b.to.toFixed(1)}`);
     if (!orchestrate) continue;
     const arr = orchestrate(midi, { ...(s.bach ? { from: s.from, to: s.to } : {}), solo: s.title === 'Whiter Shade' ? '2/2' : undefined });
-    const m = metrics(midi, arr);
+    const m = check(metrics(midi, arr), arr);
     const same = s.bach ? hash(arr.events) === b?.hash : null;
     const f = judge(m, s, same);
     console.log(`${(s.title + ' now').padEnd(14)} ${row(m)}  ${arr.from.toFixed(1)}–${arr.to.toFixed(1)}  ${s.bach ? (same ? 'same events' : 'CHANGED') : ''} ${f.length ? 'FAIL ' + f.join('; ') : 'pass'}`);

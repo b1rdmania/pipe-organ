@@ -17,28 +17,22 @@ import { createStPaulsScene } from './scene-stpauls.js';
 import { layoutOrganSplit } from './organ-layout-split.js';
 import { STOPS, STYLES } from '../engine/organ.js';
 import { parseMidi } from '../engine/midi.js';
-import { arrange, autoParts } from '../engine/arranger.js';
+import { orchestrate } from '../engine/orchestrate.js';
 import { highlights } from '../engine/voicer.js';
 import { FluePipe } from '../engine/pipe.js';
 import { ROOMS } from '../engine/rooms.js';
 import { layoutOrgan, organLines, pipeSegments, NEON, INK } from './organ-view.js';
 
+// Pop songs: the arranger finds the chorus and orchestrates every part for the
+// organ (engine/orchestrate.js). Bach's organ works play as written.
 const SONGS = [
-  { title: 'Believe', by: 'Cher', file: '../songs/cher-believe.mid', from: 59.9, to: 92, reg: 'pop', keep: ['17/15', '9/6', '4/1'], solo: '17/15' },
+  { title: 'Believe', by: 'Cher', file: '../songs/cher-believe.mid' },
   { title: 'Toccata in D minor', by: 'J. S. Bach', file: '../songs/ToccataFugue.mid', from: 0, to: 20 },
-  { title: 'A Whiter Shade of Pale', by: 'Procol Harum', file: '../songs/procol-whiter-shade-bitmidi.mid', auto: true, solo: '2/2' },
-  { title: 'All I Want for Christmas Is You', by: 'Mariah Carey', file: '../songs/mariah-aiwfc.mid', auto: true },
+  { title: 'A Whiter Shade of Pale', by: 'Procol Harum', file: '../songs/procol-whiter-shade-bitmidi.mid', solo: '2/2' },
+  { title: 'All I Want for Christmas Is You', by: 'Mariah Carey', file: '../songs/mariah-aiwfc.mid' },
   { title: 'Passacaglia in C minor', by: 'J. S. Bach', file: '../songs/bwv582.mid', from: 0, to: 42 },
   { title: 'Fantasia in G minor', by: 'J. S. Bach', file: '../songs/bwv542-a4-1.mid', from: 0, to: 48 },
 ];
-const REG = {
-  // Pop on two keyboards: the tune on the Great (diapason and octave), the
-  // rest on the Swell, its box half shut, and a soft pedal.
-  pop: { great: ['ymDiap8a', 'ymOctave4'], manual: ['ymDiap8a', 'ymOctave4'], swell: { ranks: ['ymStopped8', 'ymDiap8b'], gain: 0.5 }, pedal: ['ymPedSub16', 'ymPedPrin8'], pedalGain: 0.8 },
-  full: { manual: STYLES.york.manual, pedal: STYLES.york.pedal },
-  light: { manual: ['ymDiap8a', 'ymStopped8', 'ymOctave4'], pedal: ['ymPedSub16', 'ymPedPrin8'] },
-  warm: { manual: ['ymDiap8a', 'ymDiap8b', 'ymStopped8', 'ymOctave4'], pedal: ['ymPedSub16', 'ymPedDiap16', 'ymPedPrin8'] },
-};
 // The rooms. Each has its building, its acoustic model, how its organ stands,
 // and the shots that show it.
 const ROOM_ID = new URLSearchParams(location.search).get('room') === 'stpauls' ? 'stpauls' : 'york';
@@ -718,15 +712,24 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape') stop(); });
 async function play(song) {
   current = song; stopped = false; drawSongs();
   const midi = parseMidi(song.data ?? await (await fetch(song.file)).arrayBuffer());
-  if (song.auto && !song.keep) { const a = autoParts(midi); Object.assign(song, { keep: a.keep, from: a.from, to: a.to, why: a.why }, { solo: song.solo ?? a.solo, reg: 'pop' }); }
-  const reg = REG[song.reg || 'full'];
-  const arr = arrange(midi, 'york', { from: song.from, to: song.to, speed: 0.82, keep: song.keep, ...reg, solo: song.solo });
+  const arr = orchestrate(midi, { from: song.from, to: song.to, solo: song.solo, keep: song.keep, speed: 0.82, offset: 0.4 });
+  song.why = arr.plan?.why;
   if (!arr.events.length) { await card('', 'No notes there', 'That MIDI file has nothing to play in its first minute.', 3000); await cardOff(); return; }
-  const missing = () => arr.pipes.filter((p) => !results.has(`${p.stop}:${p.key}`)).length;
-  if (missing()) { await card('', 'Voicing the last ranks'); while (missing()) await sleep(300); }
+  const missing = () => arr.pipes.filter((p) => !results.has(`${p.stop}:${p.key}`));
+  if (missing().length) {
+    // Voice exactly the pipes this song still needs, now, alongside the rest.
+    const need = missing(), n = Math.max(2, Math.min(4, hc - 2));
+    for (let i = 0; i < n; i++) {
+      const w = new Worker('../engine/voicer-worker.js', { type: 'module' });
+      w.onmessage = (e) => { if (e.data.done) { w.terminate(); return; } if (!results.has(e.data.id)) { results.set(e.data.id, e.data); onVoiced(e.data.id); } };
+      w.postMessage({ sr: SR, pipes: need.filter((_, k) => k % n === i).map((p) => ({ stop: p.stop, key: p.key })), audible: [] });
+    }
+    await card('', 'Voicing its pipes', `${need.length} still to voice.`);
+    while (missing().length) { $('#card p').textContent = `${missing().length} still to voice.`; await sleep(300); }
+  }
   const voiced = Object.fromEntries([...results.values()].map((v) => [v.id, v.params]));
-  const groups = ORGAN_SOURCES.map((id) => arr.events.filter((e) => organSource(e, STOPS[e.stop].feet).id === id).map((e) => ({ ...e, t: e.t + 0.4 })));
-  audio.node.port.postMessage({ voiced, style: STYLES.york, groups });
+  const groups = ORGAN_SOURCES.map((id) => arr.events.filter((e) => organSource(e, STOPS[e.stop].feet).id === id));
+  audio.node.port.postMessage({ voiced, style: STYLES.york, groups, box: arr.box });
   $('#ui').classList.add('gone');
   playing = song; $('#stopbtn').classList.remove('gone'); church = 0.3; reveal(1); if (bloom) bloom.strength = 0.95;
   card('', song.title, song.by).then(() => sleep(5000)).then(() => { if (current === song) cardOff(); });
@@ -744,7 +747,7 @@ async function play(song) {
       setTimeout(() => { if (current === song) showList(); }, stopped ? 0 : 7000);
       return;
     }
-    $('#progress').style.width = `${Math.min(100, (100 * e.data.t) / (arr.length + 0.4))}%`;
+    $('#progress').style.width = `${Math.min(100, (100 * e.data.t) / arr.length)}%`;
     const L = e.data.levels;
     for (const p of pipes) {
       const l = L[p.id] || 0;
