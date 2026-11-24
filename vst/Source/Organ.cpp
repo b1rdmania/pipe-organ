@@ -15,7 +15,7 @@ static const char* const kStopRanks[NumStops][3] = {
 
 void Organ::load (const std::vector<std::pair<std::string, Pipe>>& pipes)
 {
-    table.clear(); rankNames.clear(); byRank.clear();
+    table.clear(); info.clear(); rankNames.clear(); byRank.clear();
     for (auto& [id, pipe] : pipes) {
         const auto colon = id.find (':');
         if (colon == std::string::npos) continue;
@@ -31,6 +31,9 @@ void Organ::load (const std::vector<std::pair<std::string, Pipe>>& pipes)
         }
         byRank[r][(size_t) key] = (int) table.size();
         table.push_back (pipe);
+        // Open: period = bore, length = half a wavelength. Stopped: period =
+        // 2 x bore, length = a quarter. Both come to bore * c / (2 * rate).
+        info.push_back ({ key, (int) r, pipe.part, pipe.params.bore * 343.0 / (2.0 * rate) });
     }
     for (int g = 0; g < NumStops; ++g) {
         stopRanks[(size_t) g].clear();
@@ -41,6 +44,8 @@ void Organ::load (const std::vector<std::pair<std::string, Pipe>>& pipes)
             }
     }
     voiceOf.assign (table.size(), -1);
+    flags = std::make_unique<std::atomic<uint8_t>[]> (table.size());
+    for (size_t i = 0; i < table.size(); ++i) flags[i].store (0);
     want.assign (table.size(), 0.0f);
     have.assign (table.size(), 0.0f);
 }
@@ -191,6 +196,8 @@ void Organ::render (float* const* parts, int n)
             }
         }
     }
+    for (size_t i = 0; i < voiceOf.size(); ++i)
+        flags[i].store (voiceOf[i] >= 0 ? 1 : 0, std::memory_order_relaxed);
 }
 
 } // namespace voicer

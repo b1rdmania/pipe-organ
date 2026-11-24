@@ -218,6 +218,7 @@ void VoicerProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     outGain.setTargetValue (juce::Decibels::decibelsToGain (outParam->load()));
 
     const int n = buffer.getNumSamples();
+    keyboard.processNextMidiBuffer (midi, 0, n, true);
     float* L = buffer.getWritePointer (0);
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer (1) : nullptr;
     if (! resample) {

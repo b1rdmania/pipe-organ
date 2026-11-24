@@ -1,2 +1,4 @@
 build/
 JUCE/
+build-universal/
+build-ios/

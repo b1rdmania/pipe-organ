@@ -67,7 +67,31 @@ juce::Label* VoicerLook::createSliderTextBox (juce::Slider& s)
     return l;
 }
 
-VoicerEditor::VoicerEditor (VoicerProcessor& p) : AudioProcessorEditor (p), proc (p)
+void VoicerKeys::drawWhiteNote (int note, juce::Graphics& g, juce::Rectangle<float> r, bool down, bool over, juce::Colour, juce::Colour)
+{
+    g.setColour (down ? VoicerLook::neon : (over ? VoicerLook::ink.darker (0.15f) : VoicerLook::ink));
+    g.fillRect (r);
+    g.setColour (VoicerLook::dim);
+    g.drawRect (r, 1.0f);
+    if (note % 12 == 0) {
+        g.setColour (VoicerLook::dim);
+        g.setFont (juce::FontOptions ("Helvetica Neue", 10.0f, juce::Font::plain));
+        g.drawText (getWhiteNoteText (note), r.reduced (2.0f, 4.0f), juce::Justification::centredBottom, false);
+    }
+}
+
+void VoicerKeys::drawBlackNote (int, juce::Graphics& g, juce::Rectangle<float> r, bool down, bool over, juce::Colour)
+{
+    g.setColour (down ? VoicerLook::neon : (over ? VoicerLook::dim : VoicerLook::bg));
+    g.fillRect (r);
+    g.setColour (VoicerLook::dim);
+    g.drawRect (r, 1.0f);
+}
+
+VoicerEditor::VoicerEditor (VoicerProcessor& p)
+    : AudioProcessorEditor (p), proc (p),
+      keys (p.keyboard, juce::MidiKeyboardComponent::horizontalKeyboard),
+      pipes (p.getOrgan(), VoicerLook::neon, VoicerLook::ink, VoicerLook::dim)
 {
     setLookAndFeel (&look);
     for (int i = 0; i < voicer::NumStops; ++i) {
@@ -92,7 +116,32 @@ VoicerEditor::VoicerEditor (VoicerProcessor& p) : AudioProcessorEditor (p), proc
         l->setJustificationType (juce::Justification::centred);
         addAndMakeVisible (*l);
     }
-    setSize (640, 260);
+    // A 61-note manual, C2 to C7. QWERTY plays it once the keys have focus.
+    keys.setAvailableRange (36, 96);
+    keys.setLowestVisibleKey (36);
+    keys.setKeyPressBaseOctave (5);
+    keys.setScrollButtonsVisible (false);
+    keys.setOctaveForMiddleC (4);
+    keys.setColour (juce::MidiKeyboardComponent::whiteNoteColourId, VoicerLook::ink);
+    keys.setColour (juce::MidiKeyboardComponent::blackNoteColourId, VoicerLook::bg);
+    keys.setColour (juce::MidiKeyboardComponent::keySeparatorLineColourId, VoicerLook::dim);
+    keys.setColour (juce::MidiKeyboardComponent::keyDownOverlayColourId, VoicerLook::neon);
+    keys.setColour (juce::MidiKeyboardComponent::mouseOverKeyOverlayColourId, VoicerLook::neon.withAlpha (0.25f));
+    keys.setColour (juce::MidiKeyboardComponent::shadowColourId, juce::Colours::transparentBlack);
+    keys.setColour (juce::MidiKeyboardComponent::upDownButtonBackgroundColourId, VoicerLook::bg);
+    addAndMakeVisible (keys);
+    addAndMakeVisible (pipes);
+   #if JUCE_IOS
+    // Phone or AUv3 host: fill whatever space we are given.
+    setResizable (true, false);
+    setResizeLimits (480, 300, 4000, 4000);
+    if (auto* d = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+        setSize (d->userArea.getWidth(), d->userArea.getHeight());
+    else
+        setSize (844, 390);
+   #else
+    setSize (760, 520);
+   #endif
 }
 
 VoicerEditor::~VoicerEditor() { setLookAndFeel (nullptr); }
@@ -101,15 +150,32 @@ void VoicerEditor::paint (juce::Graphics& g)
 {
     g.fillAll (VoicerLook::bg);
     g.setColour (VoicerLook::ink);
-    g.setFont (look.face (20.0f, true));
-    g.drawText ("The Voicer", 24, 20, 300, 26, juce::Justification::left);
+    if (getHeight() < 450) {
+        auto safe = safeArea();
+        g.setFont (look.face (15.0f, true));
+        g.drawText ("Robot Organ", safe.getX(), safe.getY(), 200, 22, juce::Justification::left);
+        g.setColour (VoicerLook::neon);
+        g.fillRect (safe.getX(), safe.getY() + 24, 20, 2);
+        return;
+    }
+    g.setFont (look.face (15.0f, true));
+    g.drawText ("Robot Organ", 24, 22, 300, 20, juce::Justification::left);
     g.setColour (VoicerLook::neon);
-    g.fillRect (24, 52, 28, 2);
+    g.fillRect (24, 46, 20, 2);
 }
 
 void VoicerEditor::resized()
 {
+    if (getHeight() < 450) { layoutCompact(); return; }
+    keys.setScrollButtonsVisible (false);
+    keys.setLowestVisibleKey (36);
     auto r = getLocalBounds().reduced (24).withTrimmedTop (48);
+    pipes.setBounds (r.removeFromTop (170));
+    r.removeFromTop (16);
+    auto k = r.removeFromBottom (96);
+    keys.setBounds (k);
+    keys.setKeyWidth ((float) k.getWidth() / 36.0f); // 36 white keys in five octaves + top C
+    r.removeFromBottom (16);
     auto knobs = r.removeFromRight (200);
     r.removeFromRight (16);
     // Stops: four on the first row, three on the second.
@@ -120,9 +186,49 @@ void VoicerEditor::resized()
         const int row = i / perRow, col = i % perRow;
         stops[(size_t) i].setBounds (r.getX() + col * (bw + gap), r.getY() + row * (bh + gap), bw, bh);
     }
+    for (auto* l : { &echoLabel, &outputLabel }) l->setVisible (true);
+    for (auto* s : { &echo, &output }) s->setTextBoxStyle (juce::Slider::TextBoxBelow, false, 72, 18);
     auto left = knobs.removeFromLeft (100), right = knobs;
     echoLabel.setBounds (left.removeFromTop (18));
     echo.setBounds (left);
     outputLabel.setBounds (right.removeFromTop (18));
     output.setBounds (right);
+}
+
+juce::Rectangle<int> VoicerEditor::safeArea() const
+{
+    auto r = getLocalBounds();
+   #if JUCE_IOS
+    // Clear the notch / Dynamic Island and the home bar in landscape.
+    if (auto* d = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+        r = d->safeAreaInsets.subtractedFrom (r);
+   #endif
+    return r.reduced (12, 8);
+}
+
+// Landscape phone: pipes on top, one row of stops with the knobs, then a
+// two-octave manual that scrolls. Touch targets stay at 44 pt or more.
+void VoicerEditor::layoutCompact()
+{
+    auto r = safeArea().withTrimmedTop (30);
+    auto k = r.removeFromBottom (juce::jmax (110, r.getHeight() * 45 / 100));
+    keys.setScrollButtonsVisible (true);
+    keys.setBounds (k);
+    keys.setKeyWidth ((float) (k.getWidth() - 40) / 15.0f); // two octaves + top C
+    keys.setLowestVisibleKey (48);
+    r.removeFromBottom (8);
+    auto row = r.removeFromBottom (juce::jmax (44, juce::jmin (56, r.getHeight() / 2)));
+    r.removeFromBottom (6);
+    pipes.setBounds (r);
+    auto knobs = row.removeFromRight (row.getHeight() * 2 + 8);
+    row.removeFromRight (8);
+    const int gap = 6;
+    const int bw = (row.getWidth() - gap * (voicer::NumStops - 1)) / voicer::NumStops;
+    for (int i = 0; i < voicer::NumStops; ++i)
+        stops[(size_t) i].setBounds (row.getX() + i * (bw + gap), row.getY(), bw, row.getHeight());
+    for (auto* l : { &echoLabel, &outputLabel }) l->setVisible (false);
+    echo.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    output.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+    echo.setBounds (knobs.removeFromLeft (knobs.getWidth() / 2));
+    output.setBounds (knobs);
 }

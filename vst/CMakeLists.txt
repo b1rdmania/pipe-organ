@@ -1,10 +1,17 @@
 cmake_minimum_required(VERSION 3.22)
-project(TheVoicer VERSION 0.1.0 LANGUAGES C CXX)
+project(TheVoicer VERSION 0.1.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
 
 add_subdirectory(JUCE)
+
+# iPhone: the same organ as a standalone app plus an AUv3 for iOS hosts.
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(VOICER_FORMATS AUv3 Standalone)
+else()
+    set(VOICER_FORMATS VST3 AU Standalone)
+endif()
 
 juce_add_binary_data(VoicerData SOURCES
     Resources/voiced.json
@@ -13,12 +20,12 @@ juce_add_binary_data(VoicerData SOURCES
     Resources/ir-pedal.wav)
 
 juce_add_plugin(TheVoicer
-    PRODUCT_NAME "The Voicer"
+    PRODUCT_NAME "Robot Organ"
     COMPANY_NAME "Birdmania"
     BUNDLE_ID "fyi.birdmania.thevoicer"
     PLUGIN_MANUFACTURER_CODE Bird
     PLUGIN_CODE Vcr1
-    FORMATS VST3 AU Standalone
+    FORMATS ${VOICER_FORMATS}
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT FALSE
@@ -26,7 +33,10 @@ juce_add_plugin(TheVoicer
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD FALSE
     VST3_CATEGORIES Instrument Synth
-    AU_MAIN_TYPE kAudioUnitType_MusicDevice)
+    AU_MAIN_TYPE kAudioUnitType_MusicDevice
+    REQUIRES_FULL_SCREEN FALSE
+    IPHONE_SCREEN_ORIENTATIONS UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+    BACKGROUND_AUDIO_ENABLED TRUE)
 
 target_sources(TheVoicer PRIVATE
     Source/Organ.cpp
@@ -43,6 +53,7 @@ target_link_libraries(TheVoicer
     PRIVATE VoicerData juce::juce_audio_utils juce::juce_audio_formats juce::juce_dsp
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
 
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
 # Offline tests.
 add_executable(pipe_compare test/pipe_compare.cpp)
 target_include_directories(pipe_compare PRIVATE Source)
@@ -60,3 +71,4 @@ foreach(fmt AU VST3 Standalone)
         COMMAND codesign --force --deep -s - "$<TARGET_BUNDLE_DIR:TheVoicer_${fmt}>"
         VERBATIM)
 endforeach()
+endif()

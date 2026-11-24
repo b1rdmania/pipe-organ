@@ -14,7 +14,7 @@ Open http://127.0.0.1:5320.
 
 ## Plug-in
 
-VST3, AU and a standalone app for macOS 11 or later (Apple silicon and Intel). Download from [Releases](https://github.com/b1rdmania/pipe-organ/releases). The build is not notarised: read `INSTALL.txt` in the zip.
+**Robot Organ**: VST3, AU and a standalone app for macOS 11 or later (Apple silicon and Intel). Download from [Releases](https://github.com/b1rdmania/pipe-organ/releases). It has the organ front with pipes that light as they sound, and a 61-note keyboard you can play with the mouse or the computer keys. The build is not notarised: read `INSTALL.txt` in the zip.
 
 Build from source:
 

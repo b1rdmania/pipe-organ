@@ -5,6 +5,8 @@
 #pragma once
 #include "FluePipe.h"
 #include <array>
+#include <atomic>
+#include <memory>
 #include <bitset>
 #include <string>
 #include <vector>
@@ -21,6 +23,12 @@ struct Pipe {
 };
 
 // The stop groups, as the app's chord player has them.
+// What the editor needs to draw a pipe. Fixed after load().
+struct PipeInfo {
+    int key = 0, rank = 0, part = Great;
+    double length = 0; // speaking length in metres
+};
+
 enum StopGroup { Diapason8, Flute8, Octave4, Two, Mixture, Sixteen, PedalStop, NumStops };
 
 class Organ {
@@ -41,6 +49,11 @@ public:
     void render (float* const* parts, int n);
     int active() const;
 
+    const std::vector<PipeInfo>& pipeInfo() const { return info; }
+    const std::vector<std::string>& ranks() const { return rankNames; }
+    // Per pipe: 1 while it speaks. Written by the audio thread after each render.
+    bool sounding (int idx) const { return flags[(size_t) idx].load (std::memory_order_relaxed) != 0; }
+
 private:
     struct Voice {
         FluePipe pipe;
@@ -57,6 +70,8 @@ private:
     void release (int idx);
 
     std::vector<Pipe> table;
+    std::vector<PipeInfo> info;
+    std::unique_ptr<std::atomic<uint8_t>[]> flags;
     std::vector<std::string> rankNames;
     std::vector<std::array<int, 128>> byRank; // rank -> key -> table index
     std::vector<Voice> pool;

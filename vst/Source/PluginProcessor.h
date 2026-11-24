@@ -18,7 +18,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
 
-    const juce::String getName() const override { return "The Voicer"; }
+    const juce::String getName() const override { return "Robot Organ"; }
     bool acceptsMidi() const override { return true; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
@@ -37,6 +37,8 @@ public:
     bool echoReady() const;
 
     juce::AudioProcessorValueTreeState state;
+    juce::MidiKeyboardState keyboard; // on-screen keys, merged into the MIDI input
+    const voicer::Organ& getOrgan() const { return organ; }
     static const char* const stopIds[voicer::NumStops];
     static const char* const stopNames[voicer::NumStops];
 
