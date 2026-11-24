@@ -1,4 +1,4 @@
-# The Voicer
+# Robot Organ
 
 A pipe organ rebuilt in software. Every pipe is a physical model that is made and voiced in front of you, then played in a cathedral whose echo is ray-traced and checked against a real recording. No samples.
 

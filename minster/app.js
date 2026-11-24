@@ -1,4 +1,4 @@
-// The Voicer: a guided build in a cathedral (York or St Paul's), then you play it.
+// Robot Organ: a guided build in a cathedral (York or St Paul's), then you play it.
 //   I.   The pipe: one pipe is drawn, sounds wrong, and is voiced step by step.
 //   II.  The organ: every rank floats apart, is voiced for real, and slides home.
 //   III. The cathedral: the building draws itself, then one chord is played
@@ -48,7 +48,7 @@ const ROOM_UI = {
   },
 }[ROOM_ID];
 const { organSource, ORGAN_SOURCES, build: buildRoom } = ROOM_UI.model;
-document.title = `The Voicer · ${ROOM_UI.name}`;
+document.title = `Robot Organ · ${ROOM_UI.name}`;
 document.getElementById('roomname').textContent = ROOM_UI.name;
 for (const a of document.querySelectorAll('#rooms a')) if (a.dataset.room === ROOM_ID) a.setAttribute('aria-current', 'page');
 const ECHO_AT = ROOM_UI.echoAt;
