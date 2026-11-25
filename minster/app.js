@@ -239,17 +239,26 @@ function fire(parts) {
   for (const s of parts) {
     if (!s) continue;
     audio.play(s.x, rankCentre(s.r), s.r.pipes[0].pedal ? 'pedal' : 'great', s.gain);
-    for (const [p, t, d] of s.lights) {
-      if (p === hero) { setTimeout(LIT, lag + t * 1000); setTimeout(() => heroColour.copy(INK).multiplyScalar(restState === 'resting' ? 0.28 : 0.55), lag + (t + Math.max(d, 0.3) + 0.25) * 1000); continue; }
-      setTimeout(() => { p.lit = (p.lit || 0) + 1; p.state = null; organ.setPipe(p, 'sounding', 1); }, lag + t * 1000);
-      setTimeout(() => { p.lit--; if (!p.lit) { p.state = null; organ.setPipe(p, restState); } }, lag + (t + Math.max(d, 0.3) + 0.25) * 1000);
-    }
+    light(s.lights, lag);
+  }
+}
+// Light pipes for their notes: [pipe, start s, length s], from now plus lag ms.
+function light(lights, lag) {
+  for (const [p, t, d] of lights) {
+    const off = lag + (t + Math.max(d, 0.3) + 0.25) * 1000;
+    if (p === hero) { setTimeout(LIT, lag + t * 1000); setTimeout(() => heroColour.copy(INK).multiplyScalar(restState === 'resting' ? 0.28 : 0.55), off); continue; }
+    setTimeout(() => { p.lit = (p.lit || 0) + 1; p.state = null; organ.setPipe(p, 'sounding', 1); }, lag + t * 1000);
+    setTimeout(() => { p.lit--; if (!p.lit) { p.state = null; organ.setPipe(p, restState); } }, off);
   }
 }
 const phrase = (r, notes, gain = CHORD_GAIN) => fire([prepare(r, notes, gain)]);
 const chordNotes = (r, keys = [50, 53, 57, 62], sec = 3.4) => (r.pipes[0].pedal ? [38, 50] : keys).map((k) => [k, 0, sec]);
 // A held chord, D minor by default; the pedal plays low D.
 const chord = (r, keys, sec, gain = CHORD_GAIN) => phrase(r, chordNotes(r, keys, sec), gain);
+// The Toccata opening, rendered ahead: { great, pedal } as Float32Array, or null.
+const toccata = Promise.all([fetch('toccata.json').then((r) => r.json()), fetch('toccata.bin').then((r) => r.arrayBuffer())])
+  .then(([m, buf]) => { const i16 = new Int16Array(buf), n = m.length, f = (j, pk) => Float32Array.from(i16.subarray(j * n, (j + 1) * n), (v) => (v / 32767) * pk); return { great: f(0, m.peak.great), pedal: f(1, m.peak.pedal) }; })
+  .catch((e) => { console.error(e); return null; });
 const ready = () => ORDER.map((n) => rank[n]).filter((r) => r.pipes.every((p) => results.has(p.id)));
 // The opening of Bach's Toccata in D minor: the mordent A-G-A in octaves, a
 // pause, and the run down to D, over a low pedal D.
@@ -425,50 +434,40 @@ async function story(heroReady, traced) {
     await cardOff();
   }
 
-  // II. The organ, as an exploded drawing: a long lens, three-quarter high,
-  // every rank on its own layer, swinging to dead front as the ranks close.
+  // The organ: the rows close in fast, then the opening of the Toccata plays on
+  // all of them. That passage is rendered ahead (tools/toccata-render.mjs) with
+  // the same pipes and engine, so it starts at once.
   const total = pipes.length;
   lens(20, 3);
-  await card('The organ', `Seventeen rows like that make the organ: ${total} pipes.`);
+  card('The organ', `Seventeen rows like that make the organ: ${total} pipes.`);
   const R = () => caseDist() * (portrait() ? 1.6 : 2.15);
-  // Swing from three-quarter to dead front while the rows go home.
-  { const s0 = now(); cut((t) => { const u = ease((t - s0) / 5); return orbit([MID[0] - 3, MID[1], MID[2] + 1.5], R(), 0.75 - 0.75 * u, 9 - 9 * u); }, 3); }
+  { const s0 = now(); cut((t) => { const u = ease((t - s0) / 3); return orbit([MID[0] - 3, MID[1], MID[2] + 1.5], R(), 0.75 - 0.75 * u, 9 - 9 * u); }, 2); }
   traced.then((tr) => { audio.setEcho(tr); audio.openEcho(4, 0.45); });
-  for (const r of ORDER) { for (const p of rank[r].pipes) organ.setPipe(p, 'unbuilt'); await sleep(60); }
-  const flash = (id) => {
-    const p = byId.get(id); if (!p || p === hero) return;
-    rank[p.stop].done++;
-    organ.setPipe(p, 'voicing');
-    setTimeout(() => organ.setPipe(p, 'voiced'), 160);
-  };
-  // Pipes already made light up in a rush; the rest as they are finished.
-  const pending = [...results.keys()].filter((id) => id !== HERO);
-  onVoiced = (id) => pending.push(id);
-  const rush = setInterval(() => { for (let k = Math.max(1, Math.ceil(pending.length / 60)); k > 0 && pending.length; k--) flash(pending.shift()); }, 40);
-  storyTimers.push(rush);
-  await sleep(600);
-  // The rows go home quickly, one after another. A row still being made goes
-  // home dim and lights later.
   for (const name of ORDER) {
     const r = rank[name];
+    for (const p of r.pipes) organ.setPipe(p, 'voiced');
     r.from = now(); view.moving.add(r);
-    const made = () => r.pipes.every((p) => results.has(p.id));
-    for (let w = 0; w < 8 && !made(); w++) await sleep(100);
-    const ok = made();
-    await sleep(ok ? 380 : 120);
-    if (ok) phrase(r, chordNotes(r, undefined, 0.6), CHORD_GAIN * 0.8);
+    await sleep(70);
   }
-  await sleep(1200);
-  // Settle every pipe to ink first, so the only pink is what is playing.
-  clearInterval(rush); onVoiced = flash; for (const id of pending.splice(0)) flash(id);
+  const toc = await toccata;
+  await sleep(900);
   // Dim the case, so the only bright lines are the pipes playing.
   restState = 'resting';
-  for (const p of pipes) if (p !== hero && results.has(p.id)) organ.setPipe(p, 'resting');
+  for (const p of pipes) if (p !== hero) organ.setPipe(p, 'resting');
   heroColour.copy(INK).multiplyScalar(0.28);
   if (bloom) bloom.strength = 1.6;
-  await sleep(500);
-  // Full organ: the opening of Bach's Toccata in D minor, lit on the pipes.
-  fire(ready().map((r) => prepare(r, r.pipes[0].pedal ? TOCCATA.pedal : TOCCATA.manual, CHORD_GAIN * 1.2)));
+  if (toc) {
+    const group = (ped) => ORDER.map((n) => rank[n]).filter((r) => !!r.pipes[0].pedal === ped);
+    const centre = (rs) => rs.map(rankCentre).reduce((c, v) => c.map((x, i) => x + v[i] / rs.length), [0, 0, 0]);
+    const lag = 1000 * (audio.latency ? audio.latency() : 0);
+    audio.play(toc.great, centre(group(false)), 'great', CHORD_GAIN * 1.2);
+    audio.play(toc.pedal, centre(group(true)), 'pedal', CHORD_GAIN * 1.2);
+    for (const r of ORDER.map((n) => rank[n])) {
+      const notes = r.pipes[0].pedal ? TOCCATA.pedal : TOCCATA.manual;
+      const lights = notes.map(([k, t, d]) => [byId.get(`${r.pipes[0].stop}:${k}`), t, d]).filter(([q]) => q);
+      light(lights, lag);
+    }
+  }
   await sleep(4300);
   restState = 'voiced'; if (bloom) bloom.strength = 0.55;
   for (const p of pipes) if (p !== hero && p.state === 'resting') organ.setPipe(p, 'voiced');
@@ -485,7 +484,7 @@ async function story(heroReady, traced) {
   exterior = true;
   cut(WIDE, 5);
   const pedalD = rank.ymPedSub16;
-  if (pedalD.done === pedalD.pipes.length) chord(pedalD, undefined, 5.5, CHORD_GAIN * 0.7);
+  if (pedalD.pipes.every((p) => results.has(p.id))) chord(pedalD, undefined, 5.5, CHORD_GAIN * 0.7);
   audio.openEcho(5, 1);
   const sIII = now();
   await new Promise((ok) => { const step = () => { const u = (now() - sIII) / 5; reveal(ease(u)); if (u < 1) requestAnimationFrame(step); else ok(); }; step(); });
