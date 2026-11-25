@@ -40,11 +40,7 @@
   #card p { margin-top: 8px; color: #a9a7a1; font-size: clamp(15px, 1.7vw, 17px); }
 
   #steps { position: fixed; left: 52vw; top: 50%; transform: translateY(-50%); pointer-events: none; }
-  #steps ol { display: flex; flex-direction: column; gap: 10px; border: 0; }
-  #steps li { border: 0; color: #3e3d3a; transition: color 0.3s; }
-  #steps li.on { color: var(--neon); }
-  #steps li.done { color: var(--ink); }
-  #steps p { margin-top: 18px; max-width: 18em; min-height: 3em; color: #a9a7a1; transition: opacity 0.2s; }
+  #steps p { max-width: 18em; min-height: 3em; color: #a9a7a1; transition: opacity 0.2s; }
 
   /* Top right, clear of the cards and lists at the bottom and left. */
   .ctl { all: unset; position: fixed; inset-inline-end: var(--r); inset-block-start: var(--t); cursor: pointer; min-block-size: 44px; min-inline-size: 44px; padding-inline: 18px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #3e3d3a; color: #a9a7a1; transition: opacity 1s ease-out; }
@@ -104,7 +100,7 @@
   <div class="go"><button id="begin">Begin</button><a href="how.html">How we built it</a></div>
 </section>
 <div id="card" class="fade gone" aria-live="polite"><small class="num"></small><h2></h2><p></p></div>
-<div id="steps" class="fade gone"><ol class="num"><li data-k="cut">Cut-up</li><li data-k="length">Length</li><li data-k="toe">Toe</li><li data-k="nick">Nicks</li></ol><p></p></div>
+<div id="steps" class="fade gone"><p></p></div>
 <div id="progress"></div>
 <button id="skip" class="ctl fade gone">Skip</button>
 <button id="stopbtn" class="ctl fade gone">Stop</button>

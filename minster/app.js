@@ -19,7 +19,6 @@ import { layoutOrganSplit } from './organ-layout-split.js';
 import { STOPS, STYLES } from '../engine/organ.js';
 import { parseMidi } from '../engine/midi.js';
 import { orchestrate } from '../engine/orchestrate.js';
-import { highlights } from '../engine/voicer.js';
 import { ROOMS } from '../engine/rooms.js';
 import { layoutOrgan, organLines, pipeSegments, NEON, INK } from './organ-view.js';
 import { SR, buildAudio, renderNotes } from './sound.js';
@@ -305,14 +304,6 @@ function startTracing() {
 }
 
 // ---- The story
-const KIND = (a) => (/toe/.test(a) ? 'toe' : /cut-up|mouth/.test(a) ? 'cut' : /nick/.test(a) ? 'nick' : /trim|lengthen/.test(a) ? 'length' : 'other');
-const STEP = {
-  toe: 'Open or close the hole in its foot. This sets how loud it is.',
-  cut: 'Raise the top of the mouth, so it plays its own note and not one far above.',
-  nick: 'Small cuts inside the mouth, so each note starts cleanly.',
-  length: 'Trim the top until it is in tune.',
-  other: '',
-};
 const PLAY_SHOT = () => ({ p: [MID[0] - caseDist() * 1.15, 0, Math.max(3, MID[2] - 2.5)], a: [MID[0], 0, MID[2] + 0.5] });
 
 // Landing: the first pipe is already drawn, dim. Begin lights it.
@@ -350,13 +341,12 @@ $('#begin').onclick = async () => {
 
 async function story(heroReady, traced) {
   const steps = $('#steps'), stepLine = steps.querySelector('p');
-  const mark = (k) => { for (const li of steps.querySelectorAll('li')) { if (li.classList.contains('on')) li.classList.replace('on', 'done'); if (li.dataset.k === k) { li.classList.remove('done'); li.classList.add('on'); } } };
   const say = async (line) => { stepLine.style.opacity = 0; await sleep(200); stepLine.textContent = line; stepLine.style.opacity = 1; };
 
   // I. The pipe. Four shots: the whole pipe; in to the mouth; up to the top
   // for its length; back out to the whole pipe.
   INKED();
-  await card('', 'A pipe organ, rebuilt in software', 'We set out to rebuild one with the physics of the real thing.', 3000);
+  await card('', 'Nothing here is recorded', 'Your browser builds each pipe from its physics and plays it, live.', 3200);
   await card('I', 'The pipe', 'Air blows in at the bottom and across a slot called the mouth. That sets the air inside the pipe ringing.');
   await sleep(1600);
   const v = await heroReady;
@@ -364,37 +354,34 @@ async function story(heroReady, traced) {
   await cardOff();
   const heard = v.steps.filter((s) => s.audio);
   const fin = heard.at(-1);
-  const show = highlights(heard, 7);
   const shape = (s) => {
     const nicks = heard.slice(0, heard.indexOf(s) + 1).filter((x) => x.action === 'nick languid').length;
     fatGeo.setPositions(pipeSegments(hero, { len: s.bore / fin.bore, cut: s.jetRatio / fin.jetRatio, toe: s.foot / fin.foot, nicks }));
   };
   const pos = [hero.mx, hero.my, hero.mz + hero.foot];
   const MOUTH = [hero.mx, hero.my, hero.mz + hero.foot + hero.w * 0.4];
-  const TOP = [hero.mx, hero.my, hero.mz + hero.h - hero.w * 2];
   const close = () => Math.max(0.35, (hero.w * 9) / 2 / halfV());
-  shape(show[0]);
-  await cut(leftThird(MOUTH, close()), 2.2);
+  const first = heard[0];
+  shape(first);
+  await cut(leftThird(MOUTH, close()), 2);
   steps.classList.remove('gone');
   LIT();
-  await say('Straight from the workshop it sounds wrong. So we adjust it, listening each time.');
-  audio.play(show[0].audio, pos);
-  await sleep(2000);
-  for (const s of show.slice(1, -1)) {
-    const k = KIND(s.action);
-    if (k === 'length') cut(leftThird(TOP, close()), 1.2); else cut(leftThird(MOUTH, close()), 1.2);
-    mark(k);
-    await say(STEP[k]);
-    shape(s);
-    audio.play(s.audio, pos);
-    await sleep(1400);
-  }
+  await say('As made, it sounds wrong.');
+  audio.play(first.audio, pos);
+  await sleep(1700);
+  // The software voices it as an organ builder would: mouth, foot, length.
+  await say('So the software voices it, as an organ builder would.');
+  cut(leftThird(HC, heroDist() * 1.15), 1.6);
+  const m0 = now();
+  await new Promise((ok) => { const step = () => {
+    const u = ease((now() - m0) / 1.4), mix = (k) => first[k] + (fin[k] - first[k]) * u;
+    fatGeo.setPositions(pipeSegments(hero, { len: mix('bore') / fin.bore, cut: mix('jetRatio') / fin.jetRatio, toe: mix('foot') / fin.foot, nicks: Math.round(u * heard.filter((x) => x.action === 'nick languid').length) }));
+    if (u < 1) requestAnimationFrame(step); else ok();
+  }; step(); });
   shape(fin);
-  mark('');
-  cut(leftThird(HC, heroDist() * 1.15), 2.4);
-  await say('Done. It plays its note, in tune, at the right loudness.');
+  await say('Now it plays its note, in tune.');
   audio.play(fin.audio, pos);
-  await sleep(1900);
+  await sleep(1700);
   INKED();
   steps.classList.add('gone');
 
@@ -508,16 +495,25 @@ async function story(heroReady, traced) {
     const line = new LineSegments2(g, rayMat); line.frustumCulled = false;
     S.root.add(line); view.rays.push({ line, pts, cum, born });
   }
-  // Watch it bounce from outside for a moment, then come slowly in among it.
-  setTimeout(() => cut(ROOM_UI.inside(MID), 4.5), 1200);
-  setTimeout(() => { exterior = false; reveal(1); }, 3800);
-  // Once inside, drift slowly while it rings.
-  setTimeout(() => { const s = now(), A = ROOM_UI.inside(MID); cut((t) => ({ p: lerp(A.p, [A.p[0] + 7, A.p[1] * 0.6, A.p[2]], ease((t - s) / 4)), a: A.a }), 0); }, 5800);
-  await sleep(7000);
+  // Watch it bounce from outside for a moment, then one sweep down into the
+  // building to the seat in front of the organ, the room's look easing back
+  // to normal on the way.
+  await sleep(1000);
+  const SWEEP = 6;
+  cut(PLAY_SHOT(), SWEEP);
+  const sw0 = now(), b0 = bloom ? bloom.strength : 0;
+  const settle = setInterval(() => {
+    const u = ease((now() - sw0) / SWEEP);
+    fog(0.0016 + (0.009 - 0.0016) * u);
+    church = 0.25 + 0.3 * u;
+    if (bloom) bloom.strength = b0 + (0.55 - b0) * u;
+    if (exterior && u > 0.5) exterior = false;
+    reveal(1);
+    if (u >= 1) clearInterval(settle);
+  }, 50);
+  storyTimers.push(settle);
+  await sleep(SWEEP * 1000);
   await cardOff();
-  church = 0.55; reveal(1); if (bloom) bloom.strength = 0.55;
-  fog(0.009);
-  await cut(PLAY_SHOT(), 2.2);
 
   // IV. Play
   await card('IV', 'Choose something to play', '', 900);
