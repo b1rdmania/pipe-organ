@@ -8,6 +8,8 @@
 <style>
   :root { --ink: #e9e7e1; --body: #b9b7b1; --dim: #6d6b66; --neon: #ff3d6e; --line: #2a2a30; --m: clamp(16px, 4vw, 40px); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Every control has its own :active state, so drop iOS's grey tap flash. */
+  :where(button, a, summary) { -webkit-tap-highlight-color: transparent; }
   html { background-color: #000000; }
   body { background: #000; color: var(--body); font: 17px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; overflow-x: hidden; padding: var(--m) max(var(--m), env(safe-area-inset-right)) calc(var(--m) * 2) max(var(--m), env(safe-area-inset-left)); }
   main { max-inline-size: 44em; margin-inline: auto; }
@@ -27,6 +29,7 @@
   .by a { color: var(--body); }
   .lede { font-size: clamp(18px, 2.2vw, 21px); color: var(--ink); }
   .toc { position: relative; }
+  .toc summary:active { color: var(--neon); }
   .toc summary { list-style: none; display: flex; align-items: center; gap: 8px; min-block-size: 44px; cursor: pointer; color: var(--body); font-size: 15px; }
   .toc summary::-webkit-details-marker { display: none; }
   .toc summary::after { content: ""; inline-size: 7px; block-size: 7px; border-inline-end: 1px solid currentColor; border-block-end: 1px solid currentColor; rotate: 45deg; translate: 0 -2px; }

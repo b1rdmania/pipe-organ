@@ -391,12 +391,14 @@ async function story(heroReady, traced) {
     const r = rank[hero.stop];
     const row = [hero, ...r.pipes].sort((a, b) => a.key - b.key);
     const c = rankCentre(r), off = apartOffset(r, 1, row[1] ?? hero);
-    const zc = row.reduce((a, p) => a + p.mz + p.h * 0.5, 0) / row.length;
-    const mid = [c[0] + off.x, c[1] - off.z, zc];
-    let ya = Infinity, yb = -Infinity; for (const p of row) { ya = Math.min(ya, p.my); yb = Math.max(yb, p.my); }
-    const span = Math.max(3, Math.abs(yb - ya) + 2);
-    const d = span / 2 / (halfV() * S.camera.aspect), f = hero.face ?? 0;
-    cut({ p: [mid[0] - Math.cos(f) * d, mid[1] - Math.sin(f) * d, mid[2] + 0.4], a: mid }, 3.5);
+    let ya = Infinity, yb = -Infinity, za = Infinity, zb = -Infinity;
+    for (const p of row) { ya = Math.min(ya, p.my); yb = Math.max(yb, p.my); za = Math.min(za, p.mz); zb = Math.max(zb, p.mz + p.h); }
+    // Fit the whole row, tallest pipe included, with room for the card below.
+    const span = Math.max(3, Math.abs(yb - ya) + 2), tall = zb - za;
+    const d = Math.max(span / 2 / (halfV() * S.camera.aspect), (tall * 1.45) / 2 / halfV()), f = hero.face ?? 0;
+    // Aim below the row's middle so it sits in the upper part of the picture.
+    const mid = [c[0] + off.x, c[1] - off.z, (za + zb) / 2 - d * halfV() * 0.18];
+    cut({ p: [mid[0] - Math.cos(f) * d, mid[1] - Math.sin(f) * d, mid[2]], a: mid }, 3.5);
     await card('', 'A row of pipes', `One pipe for every key on the keyboard: ${row.length} of them, each made the same way.`);
     while (r.pipes.some((p) => !results.has(p.id))) await sleep(200);
     for (const p of row) {

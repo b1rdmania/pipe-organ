@@ -8,6 +8,8 @@
 <style>
   :root { --ink: #e9e7e1; --dim: #6d6b66; --neon: #ff3d6e; --line: #2a2a30; --m: clamp(16px, 3vw, 24px); --l: max(var(--m), env(safe-area-inset-left)); --r: max(var(--m), env(safe-area-inset-right)); --b: max(var(--m), env(safe-area-inset-bottom)); --t: max(var(--m), env(safe-area-inset-top)); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Every control has its own :active colour, so drop iOS's grey tap flash. */
+  :where(button, a) { -webkit-tap-highlight-color: transparent; }
   html { background-color: #000000; }
   /* A full-screen canvas app: the page itself never scrolls. */
   body { height: 100dvh; background: #000; color: var(--ink); overflow: hidden; overscroll-behavior: none; }
@@ -39,7 +41,7 @@
   #card h2 { font-weight: 300; font-size: clamp(26px, 4vw, 38px); line-height: 1.05; letter-spacing: -0.02em; }
   #card p { margin-top: 8px; color: #a9a7a1; font-size: clamp(15px, 1.7vw, 17px); }
 
-  #steps { position: fixed; left: 52vw; top: 50%; transform: translateY(-50%); pointer-events: none; }
+  #steps { position: fixed; inset-inline-start: 52vw; inset-block-start: 50%; translate: 0 -50%; pointer-events: none; }
   #steps p { max-width: 18em; min-height: 3em; color: #a9a7a1; transition: opacity 0.2s; }
 
   /* Top right, clear of the cards and lists at the bottom and left. */
@@ -47,13 +49,13 @@
   @media (hover: hover) and (pointer: fine) { .ctl:hover { color: var(--neon); border-color: var(--neon); } }
   .ctl:active { color: var(--neon); border-color: var(--neon); }
   .ctl.gone { opacity: 0; pointer-events: none; }
-  #progress { position: fixed; left: 0; bottom: 0; height: 1px; width: 0; background: var(--neon); }
+  #progress { position: fixed; inset-inline-start: 0; inset-block-end: 0; block-size: 1px; inline-size: 0; background: var(--neon); }
 
   .ui { position: fixed; inset-inline-start: var(--l); inset-block-start: var(--t); inline-size: min(360px, calc(100vw - var(--l) - var(--r))); max-block-size: calc(100dvh - var(--t) - var(--b) - 56px); overflow: auto; overscroll-behavior: contain; padding: 16px 18px 18px; background: rgba(0, 0, 0, 0.82); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: 16px; }
   ol { list-style: none; border-top: 1px solid var(--line); }
   li { border-bottom: 1px solid var(--line); }
   li button { all: unset; display: flex; justify-content: space-between; align-items: center; gap: 12px; inline-size: 100%; min-block-size: 44px; cursor: pointer; color: #a9a7a1; }
-  li button span { color: var(--dim); text-align: right; }
+  li button span { color: var(--dim); text-align: end; }
   @media (hover: hover) and (pointer: fine) { li button:hover { color: var(--ink); } }
   li button:active { color: var(--ink); }
   li button[aria-pressed="true"] { color: var(--neon); }
@@ -74,16 +76,15 @@
   #stops button { all: unset; cursor: pointer; min-block-size: 44px; padding-inline: 12px; display: inline-flex; align-items: center; border: 1px solid #3e3d3a; color: #a9a7a1; font-size: 14px; background: rgba(0, 0, 0, 0.7); }
   #stops button[aria-pressed="true"] { border-color: var(--neon); color: var(--ink); }
   #stops button:active { color: var(--neon); }
-  #keys { position: relative; display: flex; block-size: clamp(110px, 22vh, 170px); touch-action: none; user-select: none; -webkit-user-select: none; }
+  #keys { -webkit-touch-callout: none; position: relative; display: flex; block-size: clamp(110px, 22vh, 170px); touch-action: none; user-select: none; -webkit-user-select: none; }
   #keys .w { flex: 1; border: 1px solid #5d5b57; border-inline-start-width: 0; background: rgba(12, 12, 14, 0.92); }
   #keys .w:first-child { border-inline-start-width: 1px; }
   #keys .b { position: absolute; inset-block-start: 0; block-size: 60%; background: #1b1b1f; border: 1px solid #5d5b57; }
   #keys .on { background: var(--neon); }
   /* While playing, the cards sit above the keyboard. */
   body.live #card { inset-block-end: calc(clamp(110px, 22vh, 170px) + 76px + var(--b)); }
-  :where(button, input):focus-visible { outline: 1px solid var(--neon); outline-offset: 3px; }
-  #progress { inset-block-end: 0; }
-  @media (max-width: 720px) { #steps { left: auto; inset-inline-end: var(--r); top: 38%; } #steps p { max-inline-size: 13em; } }
+  :where(button, input, a):focus-visible { outline: 1px solid var(--neon); outline-offset: 3px; }
+  @media (max-width: 720px) { #steps { inset-inline-start: auto; inset-inline-end: var(--r); inset-block-start: 38%; } #steps p { max-inline-size: 13em; } }
 </style>
 <script type="importmap">
 { "imports": {
