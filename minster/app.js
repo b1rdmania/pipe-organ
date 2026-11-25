@@ -475,7 +475,7 @@ async function story(heroReady, traced) {
   const tr = await traced;
   if (!audio.make || audio.make === 9) audio.setEcho(tr);
   await sleep(500);
-  await card('', 'Its echo', 'We trace how sound bounces round the building and check it against a real recording made there. Here is one chord, held, with its sound slowed down twelve times.');
+  await card('', 'Its echo', 'Every bounce traced, and tuned to real recordings from the University of York. One chord, slowed 12×.');
   // The church dims and goes quiet; then one held chord, and its echo is left
   // ringing on its own.
   const dim0 = now();
