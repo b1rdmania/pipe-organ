@@ -15,7 +15,8 @@ export function renderNotes(notes, tail = 0.8) {
   for (const { params, key, t, d } of notes) {
     const pipe = new FluePipe(SR, params, 77 + key), a = Math.round(t * SR), off = Math.round(d * SR);
     pipe.noteOn();
-    for (let i = 0; a + i < x.length; i++) { if (i === off) pipe.noteOff(); x[a + i] += pipe.tick(1); }
+    const stop = Math.min(x.length - a, off + Math.round(tail * SR));
+    for (let i = 0; i < stop; i++) { if (i === off) pipe.noteOff(); x[a + i] += pipe.tick(1); }
   }
   return x;
 }
@@ -77,6 +78,8 @@ export function buildAudio(ctx, { pipes, organSource, sources }) {
       for (const g of Object.values(echo)) g.send.gain.setTargetAtTime(level, t, sec / 3);
       master.gain.setTargetAtTime(this.make, t, sec / 3);
     },
+    // Seconds from start() to the speaker, so lights can wait for the sound.
+    latency() { return (ctx.baseLatency || 0) + (ctx.outputLatency || 0); },
     // One sound from one place.
     play(x, pos, group = 'great', gain = 1) {
       const b = new AudioBuffer({ length: x.length, sampleRate: SR }); b.copyToChannel(x, 0);

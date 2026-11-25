@@ -62,10 +62,9 @@ const ease = (u) => { u = Math.min(1, Math.max(0, u)); return u * u * (3 - 2 * u
 const lerp = (a, b, u) => a.map((v, i) => v + (b[i] - v) * u);
 
 // ---- Cards: one line of story at a time.
-async function card(small, title, line = '', hold = 0) {
+async function card(title, line = '', hold = 0) {
   const c = $('#card');
   if (!c.classList.contains('gone')) { c.classList.add('gone'); await sleep(700); }
-  c.querySelector('small').textContent = small;
   c.querySelector('h2').textContent = title;
   c.querySelector('p').textContent = line;
   c.classList.remove('gone');
@@ -104,7 +103,7 @@ fat.rotation.y = hero.face ?? 0;
 S.root.add(fat);
 const heroColour = new THREE.Color().copy(INK).multiplyScalar(0.35);
 const LIT = () => heroColour.copy(NEON).multiplyScalar(3);
-const INKED = () => heroColour.copy(INK).multiplyScalar(0.9);
+const INKED = () => heroColour.copy(INK).multiplyScalar(0.55);
 
 function resize() {
   S.renderer.setSize(innerWidth, innerHeight, false);
@@ -223,21 +222,34 @@ const CHORD_GAIN = 4;
 // What a pipe goes back to after it sounds: 'resting' (dimmed) while a passage plays, so only sounding pipes stand out.
 let restState = 'voiced';
 // Notes on one rank as [key, start s, length s]; its pipes light as they sound.
-function phrase(r, notes, gain = CHORD_GAIN) {
-  const stop = r.pipes[0].stop, list = [];
+// Rendering takes time, so every rank in a passage is rendered first, then all
+// of them start at once with their lights timed from that same moment.
+function prepare(r, notes, gain = CHORD_GAIN) {
+  const stop = r.pipes[0].stop, list = [], lights = [];
   for (const [k, t, d] of notes) {
     const v = results.get(`${stop}:${k}`); if (!v) continue;
     list.push({ params: v.params, key: k, t, d });
     const p = byId.get(`${stop}:${k}`);
-    if (p && p !== hero) {
-      setTimeout(() => { p.lit = (p.lit || 0) + 1; p.state = null; organ.setPipe(p, 'sounding', 1); }, t * 1000);
-      setTimeout(() => { p.lit--; if (!p.lit) { p.state = null; organ.setPipe(p, restState); } }, (t + Math.max(d, 0.3) + 0.25) * 1000);
+    if (p) lights.push([p, t, d]);
+  }
+  return list.length ? { r, gain, lights, x: renderNotes(list) } : null;
+}
+function fire(parts) {
+  const lag = 1000 * (audio.latency ? audio.latency() : 0);
+  for (const s of parts) {
+    if (!s) continue;
+    audio.play(s.x, rankCentre(s.r), s.r.pipes[0].pedal ? 'pedal' : 'great', s.gain);
+    for (const [p, t, d] of s.lights) {
+      if (p === hero) { setTimeout(LIT, lag + t * 1000); setTimeout(() => heroColour.copy(INK).multiplyScalar(restState === 'resting' ? 0.28 : 0.55), lag + (t + Math.max(d, 0.3) + 0.25) * 1000); continue; }
+      setTimeout(() => { p.lit = (p.lit || 0) + 1; p.state = null; organ.setPipe(p, 'sounding', 1); }, lag + t * 1000);
+      setTimeout(() => { p.lit--; if (!p.lit) { p.state = null; organ.setPipe(p, restState); } }, lag + (t + Math.max(d, 0.3) + 0.25) * 1000);
     }
   }
-  if (list.length) audio.play(renderNotes(list), rankCentre(r), r.pipes[0].pedal ? 'pedal' : 'great', gain);
 }
+const phrase = (r, notes, gain = CHORD_GAIN) => fire([prepare(r, notes, gain)]);
+const chordNotes = (r, keys = [50, 53, 57, 62], sec = 3.4) => (r.pipes[0].pedal ? [38, 50] : keys).map((k) => [k, 0, sec]);
 // A held chord, D minor by default; the pedal plays low D.
-const chord = (r, keys = [50, 53, 57, 62], sec = 3.4, gain = CHORD_GAIN) => phrase(r, (r.pipes[0].pedal ? [38, 50] : keys).map((k) => [k, 0, sec]), gain);
+const chord = (r, keys, sec, gain = CHORD_GAIN) => phrase(r, chordNotes(r, keys, sec), gain);
 const ready = () => ORDER.map((n) => rank[n]).filter((r) => r.pipes.every((p) => results.has(p.id)));
 // The opening of Bach's Toccata in D minor: the mordent A-G-A in octaves, a
 // pause, and the run down to D, over a low pedal D.
@@ -335,7 +347,7 @@ $('#begin').onclick = async () => {
   story(heroReady, traced).then(() => { skipSignal = null; $('#skip').classList.add('gone'); }).catch((e) => {
     skipSignal = null;
     if (e === SKIP) toPlay(traced);
-    else { console.error(e); card('', 'Something went wrong', String(e)); }
+    else { console.error(e); card('Something went wrong', String(e)); }
   });
 };
 
@@ -346,8 +358,8 @@ async function story(heroReady, traced) {
   // I. The pipe. Four shots: the whole pipe; in to the mouth; up to the top
   // for its length; back out to the whole pipe.
   INKED();
-  await card('', 'Nothing here is recorded', 'Your browser builds each pipe from its physics and plays it, live.', 3200);
-  await card('I', 'The pipe', 'Air blows in at the bottom and across a slot called the mouth. That sets the air inside the pipe ringing.');
+  await card('Nothing here is recorded', 'Your browser builds each pipe from its physics and plays it, live.', 3200);
+  await card('The pipe', 'Air blows in at the bottom and across a slot called the mouth. That sets the air inside the pipe ringing.');
   await sleep(1600);
   const v = await heroReady;
   await sleep(500);
@@ -365,8 +377,8 @@ async function story(heroReady, traced) {
   shape(first);
   await cut(leftThird(MOUTH, close()), 2);
   steps.classList.remove('gone');
-  LIT();
   await say('As made, it sounds wrong.');
+  LIT();
   audio.play(first.audio, pos);
   await sleep(1700);
   // The software voices it as an organ builder would: mouth, foot, length.
@@ -399,13 +411,14 @@ async function story(heroReady, traced) {
     // Aim below the row's middle so it sits in the upper part of the picture.
     const mid = [c[0] + off.x, c[1] - off.z, (za + zb) / 2 - d * halfV() * 0.18];
     cut({ p: [mid[0] - Math.cos(f) * d, mid[1] - Math.sin(f) * d, mid[2]], a: mid }, 3.5);
-    await card('', 'A row of pipes', `One pipe for every key on the keyboard: ${row.length} of them, each made the same way.`);
+    await card('A row of pipes', `One pipe for every key on the keyboard: ${row.length} of them, each made the same way.`);
     while (r.pipes.some((p) => !results.has(p.id))) await sleep(200);
     for (const p of row) {
-      if (p === hero) { LIT(); setTimeout(INKED, 300); }
-      else { organ.setPipe(p, 'voicing'); setTimeout(() => organ.setPipe(p, 'voiced'), 260); }
       const v = p === hero ? { params: fin.params ?? results.get(HERO).params } : results.get(p.id);
-      if (v && p.key % 2 === 0) audio.play(renderNotes([{ params: v.params, key: p.key, t: 0, d: 0.22 }], 0.25), [p.mx, p.my, p.mz + p.foot], 'great', 2.5);
+      const heard = v && p.key % 2 === 0;
+      if (p === hero && heard) { LIT(); setTimeout(INKED, 300); }
+      if (p !== hero) { organ.setPipe(p, heard ? 'sounding' : 'voicing', 1); setTimeout(() => { p.state = null; organ.setPipe(p, 'voiced'); }, 260); }
+      if (heard) audio.play(renderNotes([{ params: v.params, key: p.key, t: 0, d: 0.22 }], 0.25), [p.mx, p.my, p.mz + p.foot], 'great', 2.5);
       await sleep(70);
     }
     await sleep(1800);
@@ -416,7 +429,7 @@ async function story(heroReady, traced) {
   // every rank on its own layer, swinging to dead front as the ranks close.
   const total = pipes.length;
   lens(20, 3);
-  await card('II', 'The organ', `Seventeen rows like that make the organ: ${total} pipes.`);
+  await card('The organ', `Seventeen rows like that make the organ: ${total} pipes.`);
   const R = () => caseDist() * (portrait() ? 1.6 : 2.15);
   // Swing from three-quarter to dead front while the rows go home.
   { const s0 = now(); cut((t) => { const u = ease((t - s0) / 5); return orbit([MID[0] - 3, MID[1], MID[2] + 1.5], R(), 0.75 - 0.75 * u, 9 - 9 * u); }, 3); }
@@ -439,9 +452,13 @@ async function story(heroReady, traced) {
   for (const name of ORDER) {
     const r = rank[name];
     r.from = now(); view.moving.add(r);
-    await sleep(110);
+    const made = () => r.pipes.every((p) => results.has(p.id));
+    for (let w = 0; w < 8 && !made(); w++) await sleep(100);
+    const ok = made();
+    await sleep(ok ? 380 : 120);
+    if (ok) phrase(r, chordNotes(r, undefined, 0.6), CHORD_GAIN * 0.8);
   }
-  await sleep(1700);
+  await sleep(1200);
   // Settle every pipe to ink first, so the only pink is what is playing.
   clearInterval(rush); onVoiced = flash; for (const id of pending.splice(0)) flash(id);
   // Dim the case, so the only bright lines are the pipes playing.
@@ -451,7 +468,7 @@ async function story(heroReady, traced) {
   if (bloom) bloom.strength = 1.6;
   await sleep(500);
   // Full organ: the opening of Bach's Toccata in D minor, lit on the pipes.
-  for (const r of ready()) phrase(r, r.pipes[0].pedal ? TOCCATA.pedal : TOCCATA.manual, CHORD_GAIN * 1.2);
+  fire(ready().map((r) => prepare(r, r.pipes[0].pedal ? TOCCATA.pedal : TOCCATA.manual, CHORD_GAIN * 1.2)));
   await sleep(4300);
   restState = 'voiced'; if (bloom) bloom.strength = 0.55;
   for (const p of pipes) if (p !== hero && p.state === 'resting') organ.setPipe(p, 'voiced');
@@ -463,7 +480,7 @@ async function story(heroReady, traced) {
   // sound's paths through the building as the echo rings.
   fog(0.0016);
   lens(baseFov, 4);
-  await card('III', 'The cathedral', ROOM_UI.line);
+  await card('The cathedral', ROOM_UI.line);
   const WIDE = ROOM_UI.wide;
   exterior = true;
   cut(WIDE, 5);
@@ -475,7 +492,7 @@ async function story(heroReady, traced) {
   const tr = await traced;
   if (!audio.make || audio.make === 9) audio.setEcho(tr);
   await sleep(500);
-  await card('', 'Its echo', 'Every bounce traced, and tuned to real recordings from the University of York. One chord, slowed 12×.');
+  await card('Its echo', 'Every bounce traced, and tuned to real recordings from the University of York. One chord, slowed 12×.');
   // The church dims and goes quiet; then one held chord, and its echo is left
   // ringing on its own.
   const dim0 = now();
@@ -483,7 +500,7 @@ async function story(heroReady, traced) {
   storyTimers.push(dimmer);
   await sleep(600);
   if (bloom) bloom.strength = 1.1;
-  for (const r of ready()) chord(r, undefined, 2.5, CHORD_GAIN * 1.3);
+  fire(ready().map((r) => prepare(r, chordNotes(r, undefined, 2.5), CHORD_GAIN * 1.3)));
   // The chord's sound paths, kept inside the drawn building, leave with it.
   const born = now();
   for (const r of tr) for (const path of r.paths) {
@@ -518,7 +535,7 @@ async function story(heroReady, traced) {
   await cardOff();
 
   // IV. Play
-  await card('IV', 'Choose something to play', '', 900);
+  await card('Choose something to play', '', 900);
   await cardOff();
   list.draw();
   $('#ui').classList.remove('gone');
@@ -566,7 +583,7 @@ async function play(song) {
   stopped = false;
   const midi = parseMidi(song.data ?? await (await fetch(song.file)).arrayBuffer());
   const arr = arrange(midi, song);
-  if (!arr.events.length) { await card('', 'No notes there', 'That MIDI file has nothing to play in its first minute.', 3000); await cardOff(); return; }
+  if (!arr.events.length) { await card('No notes there', 'That MIDI file has nothing to play in its first minute.', 3000); await cardOff(); return; }
   const missing = () => arr.pipes.filter((p) => !results.has(`${p.stop}:${p.key}`));
   if (missing().length) {
     // Voice exactly the pipes this song still needs, now, alongside the rest.
@@ -577,7 +594,7 @@ async function play(song) {
       w.onmessage = (e) => { if (e.data.done) { w.terminate(); return; } if (!results.has(e.data.id)) { results.set(e.data.id, e.data); onVoiced(e.data.id); } };
       w.postMessage({ sr: SR, pipes: need.filter((_, k) => k % n === i).map((p) => ({ stop: p.stop, key: p.key })), audible: [] });
     }
-    await card('', 'Making its pipes', `${need.length} to go.`);
+    await card('Making its pipes', `${need.length} to go.`);
     while (missing().length && mine === picked) { $('#card p').textContent = `${missing().length} to go.`; await sleep(300); }
   }
   if (mine !== picked) return;
@@ -586,7 +603,7 @@ async function play(song) {
   audio.node.port.postMessage({ voiced, style: STYLES.york, groups, box: arr.box });
   $('#ui').classList.add('gone');
   playing = song; $('#stopbtn').classList.remove('gone'); church = 0.3; reveal(1); if (bloom) bloom.strength = 0.95;
-  card('', song.title, song.by).then(() => sleep(5000)).then(() => { if (list.isCurrent(song)) cardOff(); });
+  card(song.title, song.by).then(() => sleep(5000)).then(() => { if (list.isCurrent(song)) cardOff(); });
   // The camera drifts closer while it plays, and the sound goes with it.
   const s = now(), P0 = PLAY_SHOT(), c = [MID[0], 0, MID[2] - 0.5];
   cut((t) => {
@@ -718,7 +735,7 @@ function openLive() {
   buildStops(); buildKeys(); midiIn();
   cut(PLAY_SHOT(), 2);
   liftView();
-  card('', 'Play it yourself', 'Use the keys, your computer keyboard (A to K), or a MIDI keyboard.').then(() => sleep(4000)).then(cardOff);
+  card('Play it yourself', 'Use the keys, your computer keyboard (A to K), or a MIDI keyboard.').then(() => sleep(4000)).then(cardOff);
 }
 // While the keyboard is up, move the picture up by half the panel's height,
 // so the organ sits in the clear space above the keys.

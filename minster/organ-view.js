@@ -73,7 +73,7 @@ export function organLines(root, pipes, hero) {
     if (state === 'hidden') return tmp.setRGB(0, 0, 0);
     if (state === 'unbuilt') return tmp.copy(INK).multiplyScalar(0.14);
     if (state === 'resting') return tmp.copy(INK).multiplyScalar(0.28);
-    if (state === 'voicing') return tmp.copy(NEON).multiplyScalar(2.2);
+    if (state === 'voicing') return tmp.copy(INK).multiplyScalar(0.95); // made: drawn in, no flash. Light is only for sound
     if (state === 'sounding' && level > 0.02) return tmp.copy(NEON).multiplyScalar(0.8 + 2.4 * level);
     return tmp.copy(INK).multiplyScalar(0.95);
   };

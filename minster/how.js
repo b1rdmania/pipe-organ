@@ -136,7 +136,7 @@ const thick = (positions, colour, width, mats) => {
   const pipes = layoutOrgan(ALL);
   const root = new THREE.Group(); S.scene.add(root);
   const org = organLines(root, pipes, pipes[0]);
-  for (const q of pipes) org.setPipe(q, q.stop === 'ymDiap8a' ? 'voicing' : 'voiced');
+  for (const q of pipes) org.setPipe(q, q.stop === 'ymDiap8a' ? 'sounding' : 'voiced', 0.6);
   const box = new THREE.Box3().setFromObject(root), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
   S.controls.target.copy(c);
   S.camera.position.set(c.x - sz.z * 1.7, c.y + sz.y * 0.25, c.z - sz.z * 0.45);
