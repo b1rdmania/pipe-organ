@@ -6,6 +6,8 @@ export const SONGS = [
   { title: 'Toccata in D minor', by: 'J. S. Bach', file: '../songs/ToccataFugue.mid', from: 0, to: 20 },
   { title: 'A Whiter Shade of Pale', by: 'Procol Harum', file: '../songs/procol-whiter-shade-bitmidi.mid', solo: '2/2' },
   { title: 'All I Want for Christmas Is You', by: 'Mariah Carey', file: '../songs/mariah-aiwfc.mid' },
+  { title: 'Stay Another Day', by: 'East 17', file: '../songs/east17-stay-another-day.mid', solo: '0/3' },
+  { title: 'Do They Know It’s Christmas?', by: 'Band Aid', file: '../songs/band-aid-do-they-know.mid' },
   { title: 'Passacaglia in C minor', by: 'J. S. Bach', file: '../songs/bwv582.mid', from: 0, to: 42 },
   { title: 'Fantasia in G minor', by: 'J. S. Bach', file: '../songs/bwv542-a4-1.mid', from: 0, to: 48 },
 ];
